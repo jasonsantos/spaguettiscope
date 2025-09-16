@@ -1,0 +1,21 @@
+{
+  "name": "@spaguettiscope/core",
+  "version": "1.0.0",
+  "description": "Framework-agnostic code analysis engine",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Building core...'",
+    "dev": "echo 'Core development mode...'",
+    "test": "echo 'Testing core...'",
+    "lint": "echo 'Linting core...'",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "glob": "^10.3.10",
+    "ts-morph": "^20.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "acorn": "^8.11.0",
+    "acorn-walk": "^8.3.0"
+  }
+}

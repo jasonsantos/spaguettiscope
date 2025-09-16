@@ -1,0 +1,27 @@
+{
+  "name": "@spaguettiscope/plugin-nextjs",
+  "version": "1.0.0",
+  "description": "NextJS framework plugin for SpaguettiScope",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Building NextJS plugin...'",
+    "dev": "echo 'NextJS plugin development mode...'",
+    "test": "echo 'Testing NextJS plugin...'",
+    "lint": "echo 'Linting NextJS plugin...'",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@spaguettiscope/core": "workspace:*",
+    "glob": "^10.3.10"
+  },
+  "peerDependencies": {
+    "next": ">=13.0.0"
+  },
+  "keywords": [
+    "nextjs",
+    "spaguettiscope",
+    "plugin",
+    "analysis"
+  ]
+}
