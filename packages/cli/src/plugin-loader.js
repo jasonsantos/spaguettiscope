@@ -3,35 +3,37 @@
  * Discovers and loads framework plugins dynamically
  */
 
-import { existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { existsSync } from 'fs'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 export class PluginLoader {
   constructor() {
-    this.plugins = new Map();
-    this.pluginPaths = [];
-    this.initialized = false;
+    this.plugins = new Map()
+    this.pluginPaths = []
+    this.initialized = false
   }
 
   /**
    * Initialize plugin loader and discover available plugins
    */
   async initialize() {
-    if (this.initialized) {return;}
+    if (this.initialized) {
+      return
+    }
 
     // Add default plugin search paths
-    this.addPluginPath(join(__dirname, '../../../plugins'));
-    this.addPluginPath(join(process.cwd(), 'plugins'));
-    this.addPluginPath(join(process.cwd(), 'node_modules/@spaguettiscope'));
+    this.addPluginPath(join(__dirname, '../../../plugins'))
+    this.addPluginPath(join(process.cwd(), 'plugins'))
+    this.addPluginPath(join(process.cwd(), 'node_modules/@spaguettiscope'))
 
     // Discover and load plugins
-    await this.discoverPlugins();
-    
-    this.initialized = true;
+    await this.discoverPlugins()
+
+    this.initialized = true
   }
 
   /**
@@ -39,7 +41,7 @@ export class PluginLoader {
    */
   addPluginPath(path) {
     if (existsSync(path) && !this.pluginPaths.includes(path)) {
-      this.pluginPaths.push(path);
+      this.pluginPaths.push(path)
     }
   }
 
@@ -47,27 +49,29 @@ export class PluginLoader {
    * Discover available plugins
    */
   async discoverPlugins() {
-    const builtInPlugins = await this.loadBuiltInPlugins();
-    const externalPlugins = await this.loadExternalPlugins();
-    
+    const builtInPlugins = await this.loadBuiltInPlugins()
+    const externalPlugins = await this.loadExternalPlugins()
+
     // Merge plugins (external plugins can override built-in ones)
     for (const [name, plugin] of builtInPlugins) {
-      this.plugins.set(name, plugin);
-    }
-    
-    for (const [name, plugin] of externalPlugins) {
-      this.plugins.set(name, plugin);
+      this.plugins.set(name, plugin)
     }
 
-    console.log(`Discovered ${this.plugins.size} plugin(s): ${Array.from(this.plugins.keys()).join(', ')}`);
+    for (const [name, plugin] of externalPlugins) {
+      this.plugins.set(name, plugin)
+    }
+
+    console.log(
+      `Discovered ${this.plugins.size} plugin(s): ${Array.from(this.plugins.keys()).join(', ')}`
+    )
   }
 
   /**
    * Load built-in plugins
    */
   async loadBuiltInPlugins() {
-    const plugins = new Map();
-    
+    const plugins = new Map()
+
     // Load NextJS plugin
     try {
       // Try multiple possible paths for the NextJS plugin
@@ -75,117 +79,155 @@ export class PluginLoader {
         join(__dirname, '../../../plugins/nextjs/src/index.js'),
         join(process.cwd(), 'plugins/nextjs/src/index.js'),
         join(process.cwd(), '../plugins/nextjs/src/index.js'),
-        join(process.cwd(), '../../plugins/nextjs/src/index.js')
-      ];
-      
-      let nextjsPlugin = null;
+        join(process.cwd(), '../../plugins/nextjs/src/index.js'),
+      ]
+
+      let nextjsPlugin = null
       for (const pluginPath of possiblePaths) {
         if (existsSync(pluginPath)) {
           try {
-            const module = await import(pluginPath);
-            nextjsPlugin = module.nextjsPlugin || module.default;
+            const module = await import(pluginPath)
+            nextjsPlugin = module.nextjsPlugin || module.default
             if (nextjsPlugin) {
-              plugins.set('nextjs', nextjsPlugin);
-              console.log('✅ Loaded built-in NextJS plugin from:', pluginPath);
-              break;
+              plugins.set('nextjs', nextjsPlugin)
+              console.log('✅ Loaded built-in NextJS plugin from:', pluginPath)
+              break
             }
           } catch (importError) {
-            console.warn(`Failed to import from ${pluginPath}:`, importError.message);
+            console.warn(
+              `Failed to import from ${pluginPath}:`,
+              importError.message
+            )
           }
         }
       }
-      
+
       if (!nextjsPlugin) {
-        console.warn('⚠️  NextJS plugin not found in any expected location');
+        console.warn('⚠️  NextJS plugin not found in any expected location')
       }
     } catch (error) {
-      console.warn('⚠️  Could not load NextJS plugin:', error.message);
+      console.warn('⚠️  Could not load NextJS plugin:', error.message)
     }
 
-    return plugins;
+    return plugins
   }
 
   /**
    * Load external plugins from node_modules
    */
   async loadExternalPlugins() {
-    const plugins = new Map();
-    
+    const plugins = new Map()
+
     // Look for @spaguettiscope/plugin-* packages
     for (const searchPath of this.pluginPaths) {
       try {
-        if (!existsSync(searchPath)) {continue;}
-        
-        const { readdirSync } = await import('fs');
-        const entries = readdirSync(searchPath, { withFileTypes: true });
-        
+        if (!existsSync(searchPath)) {
+          continue
+        }
+
+        const { readdirSync } = await import('fs')
+        const entries = readdirSync(searchPath, { withFileTypes: true })
+
         for (const entry of entries) {
-          if (entry.isDirectory() && entry.name.startsWith('plugin-')) {
-            const pluginName = entry.name.replace('plugin-', '');
-            const pluginPath = join(searchPath, entry.name);
-            
+          // Check if it's a directory or symlink to a directory that starts with 'plugin-'
+          if (entry.name.startsWith('plugin-')) {
+            const fullPath = join(searchPath, entry.name)
+            const { statSync } = await import('fs')
+
             try {
-              const plugin = await this.loadPlugin(pluginPath, pluginName);
-              if (plugin) {
-                plugins.set(pluginName, plugin);
-                console.log(`✅ Loaded external plugin: ${pluginName}`);
+              const stats = statSync(fullPath)
+              if (stats.isDirectory() || stats.isSymbolicLink()) {
+                // For symlinks, check if the target is a directory
+                let isPluginDir = stats.isDirectory()
+                if (stats.isSymbolicLink()) {
+                  const { realpathSync } = await import('fs')
+                  const realPath = realpathSync(fullPath)
+                  const realStats = statSync(realPath)
+                  isPluginDir = realStats.isDirectory()
+                }
+
+                if (isPluginDir) {
+                  const pluginName = entry.name.replace('plugin-', '')
+                  const pluginPath = fullPath
+
+                  try {
+                    const plugin = await this.loadPlugin(pluginPath, pluginName)
+                    if (plugin) {
+                      plugins.set(pluginName, plugin)
+                      console.log(`✅ Loaded external plugin: ${pluginName}`)
+                    }
+                  } catch (error) {
+                    console.warn(
+                      `⚠️  Could not load plugin ${pluginName}:`,
+                      error.message
+                    )
+                  }
+                }
               }
-            } catch (error) {
-              console.warn(`⚠️  Could not load plugin ${pluginName}:`, error.message);
+            } catch (statError) {
+              console.warn(`⚠️  Could not stat ${fullPath}:`, statError.message)
             }
           }
         }
       } catch (error) {
-        console.warn(`⚠️  Could not scan plugin directory ${searchPath}:`, error.message);
+        console.warn(
+          `⚠️  Could not scan plugin directory ${searchPath}:`,
+          error.message
+        )
       }
     }
 
-    return plugins;
+    return plugins
   }
 
   /**
    * Load a specific plugin
    */
   async loadPlugin(pluginPath, pluginName) {
-    const packageJsonPath = join(pluginPath, 'package.json');
-    const srcIndexPath = join(pluginPath, 'src/index.js');
-    const indexPath = join(pluginPath, 'index.js');
-    
+    const packageJsonPath = join(pluginPath, 'package.json')
+    const srcIndexPath = join(pluginPath, 'src/index.js')
+    const indexPath = join(pluginPath, 'index.js')
+
     // Check if it's a valid plugin package
     if (!existsSync(packageJsonPath)) {
-      throw new Error(`No package.json found in ${pluginPath}`);
+      throw new Error(`No package.json found in ${pluginPath}`)
     }
 
     // Try to load the plugin module
-    let pluginModule;
-    
+    let pluginModule
+
     if (existsSync(srcIndexPath)) {
-      pluginModule = await import(srcIndexPath);
+      pluginModule = await import(srcIndexPath)
     } else if (existsSync(indexPath)) {
-      pluginModule = await import(indexPath);
+      pluginModule = await import(indexPath)
     } else {
-      throw new Error(`No index.js found in ${pluginPath}`);
+      throw new Error(`No index.js found in ${pluginPath}`)
     }
 
     // Extract the plugin instance
-    const pluginInstance = pluginModule.default || 
-                          pluginModule[`${pluginName}Plugin`] || 
-                          pluginModule[`${pluginName}plugin`] ||
-                          Object.values(pluginModule).find(exp => 
-                            exp && typeof exp === 'object' && exp.name === pluginName
-                          );
+    const pluginInstance =
+      pluginModule.default ||
+      pluginModule[`${pluginName}Plugin`] ||
+      pluginModule[`${pluginName}plugin`] ||
+      Object.values(pluginModule).find(
+        exp => exp && typeof exp === 'object' && exp.name === pluginName
+      )
 
     if (!pluginInstance) {
-      throw new Error(`No valid plugin instance found in ${pluginPath}`);
+      throw new Error(`No valid plugin instance found in ${pluginPath}`)
     }
 
     // Validate plugin interface
-    if (typeof pluginInstance.discover !== 'function' || 
-        typeof pluginInstance.canAnalyze !== 'function') {
-      throw new Error(`Plugin ${pluginName} does not implement required interface`);
+    if (
+      typeof pluginInstance.discover !== 'function' ||
+      typeof pluginInstance.canAnalyze !== 'function'
+    ) {
+      throw new Error(
+        `Plugin ${pluginName} does not implement required interface`
+      )
     }
 
-    return pluginInstance;
+    return pluginInstance
   }
 
   /**
@@ -193,15 +235,17 @@ export class PluginLoader {
    */
   getPlugin(name) {
     if (!this.initialized) {
-      throw new Error('Plugin loader not initialized. Call initialize() first.');
+      throw new Error('Plugin loader not initialized. Call initialize() first.')
     }
-    
-    const plugin = this.plugins.get(name);
+
+    const plugin = this.plugins.get(name)
     if (!plugin) {
-      throw new Error(`Plugin '${name}' not found. Available plugins: ${Array.from(this.plugins.keys()).join(', ')}`);
+      throw new Error(
+        `Plugin '${name}' not found. Available plugins: ${Array.from(this.plugins.keys()).join(', ')}`
+      )
     }
-    
-    return plugin;
+
+    return plugin
   }
 
   /**
@@ -209,14 +253,14 @@ export class PluginLoader {
    */
   listPlugins() {
     if (!this.initialized) {
-      throw new Error('Plugin loader not initialized. Call initialize() first.');
+      throw new Error('Plugin loader not initialized. Call initialize() first.')
     }
-    
+
     return Array.from(this.plugins.entries()).map(([name, plugin]) => ({
       name,
       description: plugin.description || 'No description available',
-      version: plugin.version || 'unknown'
-    }));
+      version: plugin.version || 'unknown',
+    }))
   }
 
   /**
@@ -224,40 +268,42 @@ export class PluginLoader {
    */
   async autoDetectPlugin(projectPath) {
     if (!this.initialized) {
-      await this.initialize();
+      await this.initialize()
     }
 
-    console.log(`🔍 Auto-detecting framework for: ${projectPath}`);
-    
+    console.log(`🔍 Auto-detecting framework for: ${projectPath}`)
+
     for (const [name, plugin] of this.plugins) {
       try {
-        const canAnalyze = await plugin.canAnalyze(projectPath);
+        const canAnalyze = await plugin.canAnalyze(projectPath)
         if (canAnalyze) {
-          console.log(`✅ Detected ${name} project`);
-          return { name, plugin };
+          console.log(`✅ Detected ${name} project`)
+          return { name, plugin }
         }
       } catch (error) {
-        console.warn(`⚠️  Error checking ${name} plugin:`, error.message);
+        console.warn(`⚠️  Error checking ${name} plugin:`, error.message)
       }
     }
 
-    throw new Error(`No compatible plugin found for project at ${projectPath}`);
+    throw new Error(`No compatible plugin found for project at ${projectPath}`)
   }
 
   /**
    * Validate plugin compatibility with project
    */
   async validatePlugin(pluginName, projectPath) {
-    const plugin = this.getPlugin(pluginName);
-    
+    const plugin = this.getPlugin(pluginName)
+
     try {
-      const canAnalyze = await plugin.canAnalyze(projectPath);
+      const canAnalyze = await plugin.canAnalyze(projectPath)
       if (!canAnalyze) {
-        throw new Error(`Plugin '${pluginName}' cannot analyze project at ${projectPath}`);
+        throw new Error(
+          `Plugin '${pluginName}' cannot analyze project at ${projectPath}`
+        )
       }
-      return true;
+      return true
     } catch (error) {
-      throw new Error(`Plugin validation failed: ${error.message}`);
+      throw new Error(`Plugin validation failed: ${error.message}`)
     }
   }
 
@@ -265,40 +311,41 @@ export class PluginLoader {
    * Get plugin information
    */
   getPluginInfo(name) {
-    const plugin = this.getPlugin(name);
-    
+    const plugin = this.getPlugin(name)
+
     return {
       name: plugin.name || name,
       description: plugin.description || 'No description available',
       version: plugin.version || 'unknown',
       filePatterns: plugin.getFilePatterns ? plugin.getFilePatterns() : [],
-      ignorePatterns: plugin.getIgnorePatterns ? plugin.getIgnorePatterns() : [],
-      configSchema: plugin.getConfigSchema ? plugin.getConfigSchema() : {}
-    };
+      ignorePatterns: plugin.getIgnorePatterns
+        ? plugin.getIgnorePatterns()
+        : [],
+      configSchema: plugin.getConfigSchema ? plugin.getConfigSchema() : {},
+    }
   }
 
   /**
    * Install a plugin from npm (future feature)
    */
-  async installPlugin(packageName) {
+  async installPlugin(_packageName) {
     // This would use npm/pnpm to install plugins
-    throw new Error('Plugin installation not yet implemented');
+    throw new Error('Plugin installation not yet implemented')
   }
 
   /**
    * Unload a plugin
    */
   unloadPlugin(name) {
-    return this.plugins.delete(name);
+    return this.plugins.delete(name)
   }
 
   /**
    * Reload all plugins
    */
   async reloadPlugins() {
-    this.plugins.clear();
-    this.initialized = false;
-    await this.initialize();
+    this.plugins.clear()
+    this.initialized = false
+    await this.initialize()
   }
 }
-
