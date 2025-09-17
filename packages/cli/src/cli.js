@@ -3,37 +3,39 @@
  * Beautiful command-line interface that orchestrates plugins and core analysis
  */
 
-import { Command } from 'commander';
-import inquirer from 'inquirer';
-import ora from 'ora';
-import { existsSync, writeFileSync } from 'fs';
-import { join, resolve } from 'path';
+import { Command } from 'commander'
+import inquirer from 'inquirer'
+import ora from 'ora'
+import { existsSync, writeFileSync, readFileSync } from 'fs'
+import { join, resolve, relative } from 'path'
 
-import { Analyzer } from '@spaguettiscope/core';
-import { Formatter } from './formatter.js';
-import { PluginLoader } from './plugin-loader.js';
+import { Analyzer } from '@spaguettiscope/core'
+import { Formatter } from './formatter.js'
+import { PluginLoader } from './plugin-loader.js'
 
 export class CLI {
   constructor() {
-    this.program = new Command();
-    this.formatter = new Formatter();
-    this.pluginLoader = new PluginLoader();
-    this.analyzer = new Analyzer();
-    this.initialized = false;
+    this.program = new Command()
+    this.formatter = new Formatter()
+    this.pluginLoader = new PluginLoader()
+    this.analyzer = new Analyzer()
+    this.initialized = false
   }
 
   /**
    * Initialize the CLI
    */
   async initialize() {
-    if (this.initialized) {return;}
+    if (this.initialized) {
+      return
+    }
 
     // Initialize components
-    await this.analyzer.initialize();
-    await this.pluginLoader.initialize();
-    
-    this.setupCommands();
-    this.initialized = true;
+    await this.analyzer.initialize()
+    await this.pluginLoader.initialize()
+
+    this.setupCommands()
+    this.initialized = true
   }
 
   /**
@@ -43,7 +45,7 @@ export class CLI {
     this.program
       .name('spasco')
       .description('SpaguettiScope - Framework-agnostic code entropy analyzer')
-      .version('1.0.0');
+      .version('1.0.0')
 
     // Analyze command
     this.program
@@ -54,9 +56,17 @@ export class CLI {
       .option('-v, --verbose', 'Verbose output')
       .option('-o, --output <file>', 'Output file path')
       .option('-f, --format <format>', 'Output format (json, html)', 'terminal')
+      .option(
+        '-i, --ignore <patterns...>',
+        'Additional ignore patterns (glob format)'
+      )
+      .option(
+        '--ignore-file <file>',
+        'File containing ignore patterns (.spaguettiscopeignore)'
+      )
       .action(async (path, options) => {
-        await this.handleAnalyze(path, options);
-      });
+        await this.handleAnalyze(path, options)
+      })
 
     // Report command
     this.program
@@ -64,33 +74,102 @@ export class CLI {
       .description('Generate detailed HTML report')
       .argument('[path]', 'Project path to analyze', '.')
       .option('-p, --plugin <name>', 'Framework plugin to use')
-      .option('-o, --output <file>', 'Output file path', 'spaguettiscope-report.html')
+      .option(
+        '-o, --output <file>',
+        'Output file path',
+        'spaguettiscope-report.html'
+      )
+      .option(
+        '-i, --ignore <patterns...>',
+        'Additional ignore patterns (glob format)'
+      )
+      .option(
+        '--ignore-file <file>',
+        'File containing ignore patterns (.spaguettiscopeignore)'
+      )
       .action(async (path, options) => {
-        await this.handleReport(path, options);
-      });
+        await this.handleReport(path, options)
+      })
 
     // Init command
     this.program
       .command('init')
       .description('Initialize SpaguettiScope configuration')
       .option('-p, --plugin <name>', 'Default framework plugin')
-      .action(async (options) => {
-        await this.handleInit(options);
-      });
+      .action(async options => {
+        await this.handleInit(options)
+      })
 
     // Plugins command
     this.program
       .command('plugins')
       .description('List available plugins')
       .action(async () => {
-        await this.handlePlugins();
-      });
+        await this.handlePlugins()
+      })
 
     // Help command override
-    this.program.helpOption('-h, --help', 'Display help information');
+    this.program.helpOption('-h, --help', 'Display help information')
     this.program.on('--help', () => {
-      console.log(this.formatter.formatHelp());
-    });
+      console.log(this.formatter.formatHelp())
+    })
+  }
+
+  /**
+   * Process ignore patterns from CLI options and ignore files
+   */
+  async processIgnorePatterns(projectPath, options) {
+    const ignorePatterns = []
+
+    // Add patterns from CLI --ignore flag
+    if (options.ignore && Array.isArray(options.ignore)) {
+      ignorePatterns.push(...options.ignore)
+    }
+
+    // Add patterns from ignore file
+    let ignoreFile = options.ignoreFile
+    if (!ignoreFile) {
+      // Check for default ignore files
+      const defaultIgnoreFiles = [
+        '.spaguettiscopeignore',
+        '.spaguettiscope-ignore',
+        '.scopeignore',
+      ]
+
+      for (const file of defaultIgnoreFiles) {
+        const filePath = join(projectPath, file)
+        if (existsSync(filePath)) {
+          ignoreFile = filePath
+          break
+        }
+      }
+    } else {
+      // Resolve relative ignore file path
+      ignoreFile = resolve(projectPath, ignoreFile)
+    }
+
+    if (ignoreFile && existsSync(ignoreFile)) {
+      try {
+        const content = readFileSync(ignoreFile, 'utf8')
+        const patterns = content
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line && !line.startsWith('#')) // Remove empty lines and comments
+        ignorePatterns.push(...patterns)
+
+        if (options.verbose) {
+          console.log(
+            `📋 Loaded ${patterns.length} ignore patterns from: ${relative(projectPath, ignoreFile)}`
+          )
+        }
+      } catch (error) {
+        console.warn(
+          `⚠️  Could not read ignore file ${ignoreFile}: ${error.message}`
+        )
+      }
+    }
+
+    return ignorePatterns
   }
 
   /**
@@ -98,56 +177,71 @@ export class CLI {
    */
   async handleAnalyze(projectPath, options) {
     try {
-      console.log(this.formatter.createBanner());
-      
-      const resolvedPath = resolve(projectPath);
-      
+      console.log(this.formatter.createBanner())
+
+      const resolvedPath = resolve(projectPath)
+
       if (!existsSync(resolvedPath)) {
-        throw new Error(`Project path does not exist: ${resolvedPath}`);
+        throw new Error(`Project path does not exist: ${resolvedPath}`)
       }
 
+      // Process custom ignore patterns
+      const customIgnorePatterns = await this.processIgnorePatterns(
+        resolvedPath,
+        options
+      )
+
       // Get plugin
-      let plugin;
+      let plugin
       if (options.plugin) {
-        plugin = this.pluginLoader.getPlugin(options.plugin);
-        await this.pluginLoader.validatePlugin(options.plugin, resolvedPath);
+        plugin = this.pluginLoader.getPlugin(options.plugin)
+        await this.pluginLoader.validatePlugin(options.plugin, resolvedPath)
       } else {
-        const detected = await this.pluginLoader.autoDetectPlugin(resolvedPath);
-        plugin = detected.plugin;
-        console.log(this.formatter.formatStatus(`Using ${detected.name} plugin`, 'info'));
+        const detected = await this.pluginLoader.autoDetectPlugin(resolvedPath)
+        plugin = detected.plugin
+        console.log(
+          this.formatter.formatStatus(`Using ${detected.name} plugin`, 'info')
+        )
       }
 
       // Start analysis with beautiful progress
       const spinner = ora({
-        text: this.formatter.formatStatus('Initializing analysis...', 'loading'),
-        spinner: 'dots'
-      }).start();
+        text: this.formatter.formatStatus(
+          'Initializing analysis...',
+          'loading'
+        ),
+        spinner: 'dots',
+      }).start()
 
       try {
         // Perform analysis
-        spinner.text = this.formatter.formatStatus('Scanning files...', 'loading');
+        spinner.text = this.formatter.formatStatus(
+          'Scanning files...',
+          'loading'
+        )
         const factsBundle = await this.analyzer.analyze(resolvedPath, plugin, {
-          verbose: options.verbose
-        });
+          verbose: options.verbose,
+          ignorePatterns: customIgnorePatterns,
+        })
 
-        spinner.succeed(this.formatter.formatStatus('Analysis complete!', 'success'));
+        spinner.succeed(
+          this.formatter.formatStatus('Analysis complete!', 'success')
+        )
 
         // Display results
-        await this.displayResults(factsBundle, options);
+        await this.displayResults(factsBundle, options)
 
         // Save output if requested
         if (options.output) {
-          await this.saveOutput(factsBundle, options.output, options.format);
+          await this.saveOutput(factsBundle, options.output, options.format)
         }
-
       } catch (error) {
-        spinner.fail(this.formatter.formatStatus('Analysis failed', 'error'));
-        throw error;
+        spinner.fail(this.formatter.formatStatus('Analysis failed', 'error'))
+        throw error
       }
-
     } catch (error) {
-      console.error(this.formatter.formatError(error));
-      process.exit(1);
+      console.error(this.formatter.formatError(error))
+      process.exit(1)
     }
   }
 
@@ -156,43 +250,54 @@ export class CLI {
    */
   async handleReport(projectPath, options) {
     try {
-      console.log(this.formatter.createBanner());
-      
-      const resolvedPath = resolve(projectPath);
-      
+      console.log(this.formatter.createBanner())
+
+      const resolvedPath = resolve(projectPath)
+
       if (!existsSync(resolvedPath)) {
-        throw new Error(`Project path does not exist: ${resolvedPath}`);
+        throw new Error(`Project path does not exist: ${resolvedPath}`)
       }
+
+      // Process custom ignore patterns
+      const customIgnorePatterns = await this.processIgnorePatterns(
+        resolvedPath,
+        options
+      )
 
       // Get plugin
-      let plugin;
+      let plugin
       if (options.plugin) {
-        plugin = this.pluginLoader.getPlugin(options.plugin);
-        await this.pluginLoader.validatePlugin(options.plugin, resolvedPath);
+        plugin = this.pluginLoader.getPlugin(options.plugin)
+        await this.pluginLoader.validatePlugin(options.plugin, resolvedPath)
       } else {
-        const detected = await this.pluginLoader.autoDetectPlugin(resolvedPath);
-        plugin = detected.plugin;
+        const detected = await this.pluginLoader.autoDetectPlugin(resolvedPath)
+        plugin = detected.plugin
       }
 
-      const spinner = ora('Generating detailed report...').start();
+      const spinner = ora('Generating detailed report...').start()
 
       try {
-        const factsBundle = await this.analyzer.analyze(resolvedPath, plugin);
-        const htmlReport = await this.generateHTMLReport(factsBundle);
-        
-        writeFileSync(options.output, htmlReport);
-        
-        spinner.succeed(`Report generated: ${options.output}`);
-        console.log(this.formatter.formatStatus(`Open ${options.output} in your browser`, 'success'));
+        const factsBundle = await this.analyzer.analyze(resolvedPath, plugin, {
+          ignorePatterns: customIgnorePatterns,
+        })
+        const htmlReport = await this.generateHTMLReport(factsBundle)
 
+        writeFileSync(options.output, htmlReport)
+
+        spinner.succeed(`Report generated: ${options.output}`)
+        console.log(
+          this.formatter.formatStatus(
+            `Open ${options.output} in your browser`,
+            'success'
+          )
+        )
       } catch (error) {
-        spinner.fail('Report generation failed');
-        throw error;
+        spinner.fail('Report generation failed')
+        throw error
       }
-
     } catch (error) {
-      console.error(this.formatter.formatError(error));
-      process.exit(1);
+      console.error(this.formatter.formatError(error))
+      process.exit(1)
     }
   }
 
@@ -201,49 +306,61 @@ export class CLI {
    */
   async handleInit(options) {
     try {
-      console.log(this.formatter.createBanner());
-      console.log(this.formatter.formatStatus('Initializing SpaguettiScope configuration...', 'info'));
+      console.log(this.formatter.createBanner())
+      console.log(
+        this.formatter.formatStatus(
+          'Initializing SpaguettiScope configuration...',
+          'info'
+        )
+      )
 
-      const plugins = this.pluginLoader.listPlugins();
-      
+      const plugins = this.pluginLoader.listPlugins()
+
       const answers = await inquirer.prompt([
         {
           type: 'list',
           name: 'defaultPlugin',
           message: 'Select default framework plugin:',
-          choices: plugins.map(p => ({ name: `${p.name} - ${p.description}`, value: p.name })),
-          default: options.plugin || 'nextjs'
+          choices: plugins.map(p => ({
+            name: `${p.name} - ${p.description}`,
+            value: p.name,
+          })),
+          default: options.plugin || 'nextjs',
         },
         {
           type: 'confirm',
           name: 'enableVerbose',
           message: 'Enable verbose output by default?',
-          default: false
+          default: false,
         },
         {
           type: 'list',
           name: 'outputFormat',
           message: 'Default output format:',
           choices: ['terminal', 'json', 'html'],
-          default: 'terminal'
-        }
-      ]);
+          default: 'terminal',
+        },
+      ])
 
       const config = {
         defaultPlugin: answers.defaultPlugin,
         verbose: answers.enableVerbose,
         outputFormat: answers.outputFormat,
-        created: new Date().toISOString()
-      };
+        created: new Date().toISOString(),
+      }
 
-      const configPath = join(process.cwd(), '.spaguettiscope.json');
-      writeFileSync(configPath, JSON.stringify(config, null, 2));
+      const configPath = join(process.cwd(), '.spaguettiscope.json')
+      writeFileSync(configPath, JSON.stringify(config, null, 2))
 
-      console.log(this.formatter.formatStatus(`Configuration saved to ${configPath}`, 'success'));
-
+      console.log(
+        this.formatter.formatStatus(
+          `Configuration saved to ${configPath}`,
+          'success'
+        )
+      )
     } catch (error) {
-      console.error(this.formatter.formatError(error));
-      process.exit(1);
+      console.error(this.formatter.formatError(error))
+      process.exit(1)
     }
   }
 
@@ -252,28 +369,32 @@ export class CLI {
    */
   async handlePlugins() {
     try {
-      console.log(this.formatter.createBanner());
-      
-      const plugins = this.pluginLoader.listPlugins();
-      
+      console.log(this.formatter.createBanner())
+
+      const plugins = this.pluginLoader.listPlugins()
+
       if (plugins.length === 0) {
-        console.log(this.formatter.formatStatus('No plugins found', 'warning'));
-        return;
+        console.log(this.formatter.formatStatus('No plugins found', 'warning'))
+        return
       }
 
-      console.log(this.formatter.formatStatus(`Found ${plugins.length} plugin(s):`, 'info'));
-      console.log();
+      console.log(
+        this.formatter.formatStatus(
+          `Found ${plugins.length} plugin(s):`,
+          'info'
+        )
+      )
+      console.log()
 
       plugins.forEach(plugin => {
-        console.log(`🔌 ${plugin.name}`);
-        console.log(`   ${plugin.description}`);
-        console.log(`   Version: ${plugin.version}`);
-        console.log();
-      });
-
+        console.log(`🔌 ${plugin.name}`)
+        console.log(`   ${plugin.description}`)
+        console.log(`   Version: ${plugin.version}`)
+        console.log()
+      })
     } catch (error) {
-      console.error(this.formatter.formatError(error));
-      process.exit(1);
+      console.error(this.formatter.formatError(error))
+      process.exit(1)
     }
   }
 
@@ -281,40 +402,51 @@ export class CLI {
    * Display analysis results
    */
   async displayResults(factsBundle, options) {
-    const { entropy, insights, recommendations, fileStats } = factsBundle;
+    const { entropy, insights, recommendations, fileStats } = factsBundle
 
     // Project summary
-    console.log(this.formatter.formatProjectSummary({
-      fileCount: factsBundle.files.length,
-      totalLines: fileStats.totalLines,
-      components: factsBundle.projectStructure.components?.length || 0,
-      routes: factsBundle.projectStructure.routes?.length || 0
-    }));
+    console.log(
+      this.formatter.formatProjectSummary({
+        fileCount: factsBundle.files.length,
+        totalLines: fileStats.totalLines,
+        components: factsBundle.projectStructure.components?.length || 0,
+        routes: factsBundle.projectStructure.routes?.length || 0,
+      })
+    )
 
     // Entropy score
-    console.log(this.formatter.formatEntropyScore(entropy.entropyScore, entropy.classification));
+    console.log(
+      this.formatter.formatEntropyScore(
+        entropy.entropyScore,
+        entropy.classification
+      )
+    )
 
     // Subscore breakdown
     if (options.verbose) {
-      console.log(`\n${  this.formatter.formatSubScores(entropy.subScores)}`);
+      console.log(`\n${this.formatter.formatSubScores(entropy.subScores)}`)
     }
 
     // Insights
-    console.log(`\n${  this.formatter.formatInsights(insights)}`);
+    console.log(`\n${this.formatter.formatInsights(insights)}`)
 
     // Recommendations
-    console.log(`\n${  this.formatter.formatRecommendations(recommendations)}`);
+    console.log(`\n${this.formatter.formatRecommendations(recommendations)}`)
 
     // File analysis (if verbose)
     if (options.verbose && factsBundle.complexity?.fileMetrics) {
-      console.log(`\n${  this.formatter.formatFileAnalysis(
-        factsBundle.complexity.fileMetrics.map(fm => ({
-          path: fm.file,
-          type: factsBundle.files.find(f => f.path === fm.file)?.type || 'unknown',
-          lines: factsBundle.files.find(f => f.path === fm.file)?.lines || 0,
-          complexity: fm
-        }))
-      )}`);
+      console.log(
+        `\n${this.formatter.formatFileAnalysis(
+          factsBundle.complexity.fileMetrics.map(fm => ({
+            path: fm.file,
+            type:
+              factsBundle.files.find(f => f.path === fm.file)?.type ||
+              'unknown',
+            lines: factsBundle.files.find(f => f.path === fm.file)?.lines || 0,
+            complexity: fm,
+          }))
+        )}`
+      )
     }
   }
 
@@ -322,28 +454,27 @@ export class CLI {
    * Save output to file
    */
   async saveOutput(factsBundle, outputPath, format) {
-    const spinner = ora(`Saving ${format} output...`).start();
+    const spinner = ora(`Saving ${format} output...`).start()
 
     try {
-      let content;
-      
+      let content
+
       switch (format) {
         case 'json':
-          content = JSON.stringify(factsBundle, null, 2);
-          break;
+          content = JSON.stringify(factsBundle, null, 2)
+          break
         case 'html':
-          content = await this.generateHTMLReport(factsBundle);
-          break;
+          content = await this.generateHTMLReport(factsBundle)
+          break
         default:
-          throw new Error(`Unsupported output format: ${format}`);
+          throw new Error(`Unsupported output format: ${format}`)
       }
 
-      writeFileSync(outputPath, content);
-      spinner.succeed(`Output saved to ${outputPath}`);
-
+      writeFileSync(outputPath, content)
+      spinner.succeed(`Output saved to ${outputPath}`)
     } catch (error) {
-      spinner.fail('Failed to save output');
-      throw error;
+      spinner.fail('Failed to save output')
+      throw error
     }
   }
 
@@ -389,20 +520,28 @@ export class CLI {
     
     <div class="section">
         <h2>Subscore Breakdown</h2>
-        ${Object.entries(factsBundle.entropy.subScores).map(([key, score]) => `
+        ${Object.entries(factsBundle.entropy.subScores)
+          .map(
+            ([key, score]) => `
             <div class="metric">
                 <span>${key.charAt(0).toUpperCase() + key.slice(1)}</span>
                 <span>${score.toFixed(1)}</span>
             </div>
-        `).join('')}
+        `
+          )
+          .join('')}
     </div>
     
     <div class="section">
         <h2>Recommendations</h2>
         <ul>
-            ${factsBundle.recommendations.map(rec => `
+            ${factsBundle.recommendations
+              .map(
+                rec => `
                 <li><strong>${rec.title}</strong> - ${rec.description}</li>
-            `).join('')}
+            `
+              )
+              .join('')}
         </ul>
     </div>
     
@@ -426,7 +565,7 @@ export class CLI {
         </div>
     </div>
 </body>
-</html>`;
+</html>`
   }
 
   /**
@@ -434,20 +573,18 @@ export class CLI {
    */
   async run(argv = process.argv) {
     try {
-      await this.initialize();
-      
+      await this.initialize()
+
       // If no arguments provided, show help
       if (argv.length <= 2) {
-        console.log(this.formatter.formatHelp());
-        return;
+        console.log(this.formatter.formatHelp())
+        return
       }
-      
-      await this.program.parseAsync(argv);
-      
+
+      await this.program.parseAsync(argv)
     } catch (error) {
-      console.error(this.formatter.formatError(error));
-      process.exit(1);
+      console.error(this.formatter.formatError(error))
+      process.exit(1)
     }
   }
 }
-

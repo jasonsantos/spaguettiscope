@@ -1,15 +1,47 @@
 {
   "name": "@spaguettiscope/core",
-  "version": "1.0.0",
-  "description": "Framework-agnostic code analysis engine",
+  "version": "1.1.0",
+  "description": "Framework-agnostic code analysis engine for calculating entropy scores across six dimensions",
   "main": "src/index.js",
   "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src/**/*.js",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "echo 'Building core...'",
     "dev": "echo 'Core development mode...'",
     "test": "echo 'Testing core...'",
     "lint": "echo 'Linting core...'",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run test && npm run lint"
+  },
+  "keywords": [
+    "code-analysis",
+    "entropy",
+    "complexity",
+    "static-analysis",
+    "technical-debt",
+    "code-quality",
+    "maintainability"
+  ],
+  "author": "Jason Santos",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasonsantos/spaguettiscope.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/jasonsantos/spaguettiscope/issues"
+  },
+  "homepage": "https://github.com/jasonsantos/spaguettiscope#readme",
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "glob": "^10.3.10",

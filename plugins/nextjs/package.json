@@ -1,27 +1,54 @@
 {
   "name": "@spaguettiscope/plugin-nextjs",
-  "version": "1.0.0",
-  "description": "NextJS framework plugin for SpaguettiScope",
+  "version": "1.1.0",
+  "description": "NextJS framework plugin for SpaguettiScope code entropy analyzer",
   "main": "src/index.js",
   "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src/**/*.js",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "echo 'Building NextJS plugin...'",
     "dev": "echo 'NextJS plugin development mode...'",
     "test": "echo 'Testing NextJS plugin...'",
     "lint": "echo 'Linting NextJS plugin...'",
-    "clean": "rm -rf dist"
-  },
-  "dependencies": {
-    "@spaguettiscope/core": "workspace:*",
-    "glob": "^10.3.10"
-  },
-  "peerDependencies": {
-    "next": ">=13.0.0"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run test && npm run lint"
   },
   "keywords": [
     "nextjs",
     "spaguettiscope",
     "plugin",
-    "analysis"
-  ]
+    "analysis",
+    "react",
+    "app-router",
+    "pages-router",
+    "framework"
+  ],
+  "author": "Jason Santos",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasonsantos/spaguettiscope.git",
+    "directory": "plugins/nextjs"
+  },
+  "bugs": {
+    "url": "https://github.com/jasonsantos/spaguettiscope/issues"
+  },
+  "homepage": "https://github.com/jasonsantos/spaguettiscope#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@spaguettiscope/core": "^1.1.0",
+    "glob": "^10.3.10"
+  },
+  "peerDependencies": {
+    "next": ">=13.0.0"
+  }
 }
