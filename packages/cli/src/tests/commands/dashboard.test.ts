@@ -27,10 +27,9 @@ describe('runDashboard', () => {
     ).resolves.not.toThrow();
   });
 
-  it('writes index.html when ci flag is false and connector succeeds', async () => {
-    const allureDir = join(tmpDir, 'allure-results');
-    mkdirSync(allureDir);
-
+  it('writes index.html and data/summary.json when ci flag is false', async () => {
+    const allureDir = join(tmpDir, 'allure-results')
+    mkdirSync(allureDir)
     writeFileSync(
       join(allureDir, 'test-001-result.json'),
       JSON.stringify({
@@ -41,28 +40,27 @@ describe('runDashboard', () => {
         start: Date.now() - 500,
         stop: Date.now(),
         labels: [],
-        parameters: [],
-        attachments: [],
-        steps: [],
       })
-    );
-
+    )
     writeFileSync(
       join(tmpDir, 'spaguettiscope.config.json'),
-      JSON.stringify({
-        dashboard: {
-          connectors: [{ id: 'allure', resultsDir: allureDir }],
-        },
-      })
-    );
+      JSON.stringify({ dashboard: { connectors: [{ id: 'allure', resultsDir: allureDir }] } })
+    )
+    const outputDir = join(tmpDir, 'reports')
+    await runDashboard({ ci: false, output: outputDir, projectRoot: tmpDir })
 
-    const outputDir = join(tmpDir, 'reports');
+    expect(existsSync(join(outputDir, 'index.html'))).toBe(true)
+    expect(existsSync(join(outputDir, 'data', 'summary.json'))).toBe(true)
+    expect(existsSync(join(outputDir, 'data', 'records.json'))).toBe(true)
 
-    await runDashboard({ ci: false, output: outputDir, projectRoot: tmpDir });
+    const summary = JSON.parse(readFileSync(join(outputDir, 'data', 'summary.json'), 'utf-8'))
+    expect(summary.overall.total).toBe(1)
+    expect(summary.overall.passed).toBe(1)
 
-    expect(existsSync(join(outputDir, 'index.html'))).toBe(true);
-    const html = readFileSync(join(outputDir, 'index.html'), 'utf-8');
-    expect(html).toContain('__SPASCO_DATA__');
+    const records = JSON.parse(readFileSync(join(outputDir, 'data', 'records.json'), 'utf-8'))
+    expect(Array.isArray(records)).toBe(true)
+    expect(records).toHaveLength(1)
+    expect(records[0].name).toBe('sample test')
   });
 
   it('writes history file and reads it back on second run', async () => {

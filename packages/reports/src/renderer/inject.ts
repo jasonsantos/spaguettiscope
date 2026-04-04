@@ -1,32 +1,30 @@
-import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import type { DashboardData } from '../model/dashboard.js';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import type { DashboardData } from '../model/dashboard.js'
+import type { NormalizedRunRecord } from '../model/normalized.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export function getRendererAssetsDir(): string {
-  return join(__dirname, '../../dist/renderer/assets');
+  return join(__dirname, '../../dist/renderer/assets')
 }
 
-export function buildDashboardHtml(data: DashboardData): string {
-  // In production, this reads from the pre-built Vite output in dist/renderer/
-  // In development (no dist), falls back to a minimal HTML for debugging
-  let template: string;
-
+export function buildDashboardHtml(): string {
   try {
-    template = readFileSync(
-      join(__dirname, '../../dist/renderer/index.html'),
-      'utf-8'
-    );
+    return readFileSync(join(__dirname, '../../dist/renderer/index.html'), 'utf-8')
   } catch {
-    throw new Error(
-      'Dashboard renderer not built. Run `pnpm build` in packages/reports first.'
-    );
+    throw new Error('Dashboard renderer not built. Run `pnpm build` in packages/reports first.')
   }
+}
 
-  return template.replace(
-    'window.__SPASCO_DATA__ = {};',
-    `window.__SPASCO_DATA__ = ${JSON.stringify(data)};`
-  );
+export function writeDashboardData(
+  outputDir: string,
+  data: DashboardData,
+  records: NormalizedRunRecord[]
+): void {
+  const dataDir = join(outputDir, 'data')
+  mkdirSync(dataDir, { recursive: true })
+  writeFileSync(join(dataDir, 'summary.json'), JSON.stringify(data), 'utf-8')
+  writeFileSync(join(dataDir, 'records.json'), JSON.stringify(records), 'utf-8')
 }

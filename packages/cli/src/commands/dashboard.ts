@@ -12,6 +12,7 @@ import {
   aggregateAll,
   aggregateByConnector,
   buildDashboardHtml,
+  writeDashboardData,
   getRendererAssetsDir,
   formatTerminalSummary,
   appendHistory,
@@ -113,9 +114,11 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       byConnector: aggregateByConnector(records),
     }
 
-    const html = buildDashboardHtml(dashboardData)
+    const html = buildDashboardHtml()
     const outputPath = join(outputDir, 'index.html')
     writeFileSync(outputPath, html, 'utf-8')
+
+    writeDashboardData(outputDir, dashboardData, records)
 
     // Copy renderer assets (JS bundle) alongside index.html
     const rendererDist = getRendererAssetsDir()

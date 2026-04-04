@@ -9,5 +9,5 @@ export * from './connectors/lcov.js';
 export * from './connectors/eslint.js';
 export * from './connectors/typescript.js';
 export * from './aggregator/index.js';
-export { buildDashboardHtml, getRendererAssetsDir } from './renderer/inject.js';
+export { buildDashboardHtml, writeDashboardData, getRendererAssetsDir } from './renderer/inject.js';
 export { formatTerminalSummary } from './renderer/terminal.js';
