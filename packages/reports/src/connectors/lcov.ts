@@ -38,10 +38,12 @@ export class LcovConnector implements Connector {
   readonly id = 'lcov'
 
   async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
-    const { lcovFile, threshold = DEFAULT_THRESHOLD } = config as {
-      lcovFile: string
-      threshold?: number
+    const cfg = config as Record<string, unknown>
+    const lcovFile = cfg.lcovFile
+    if (typeof lcovFile !== 'string') {
+      throw new Error('LcovConnector: config.lcovFile must be a string path')
     }
+    const threshold = typeof cfg.threshold === 'number' ? cfg.threshold : DEFAULT_THRESHOLD
 
     let content: string
     try {

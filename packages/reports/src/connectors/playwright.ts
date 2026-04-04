@@ -58,7 +58,10 @@ export class PlaywrightConnector implements Connector {
   readonly id = 'playwright';
 
   async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
-    const { reportFile } = config as { reportFile: string };
+    const reportFile = (config as Record<string, unknown>).reportFile
+    if (typeof reportFile !== 'string') {
+      throw new Error('PlaywrightConnector: config.reportFile must be a string path')
+    }
     let report: PlaywrightReport;
     try {
       report = JSON.parse(readFileSync(reportFile, 'utf-8')) as PlaywrightReport;
