@@ -14,6 +14,7 @@ import {
   appendHistory,
   type DashboardData,
   type AggregatedSlice,
+  type NormalizedRunRecord,
 } from '@spaguettiscope/reports';
 import {
   printBanner,
@@ -37,13 +38,15 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
   const projectRoot = options.projectRoot ?? process.cwd();
 
   if (!options.ci) printBanner();
+  // TODO: --open not yet implemented
+  if (options.open) printWarning('--open is not yet implemented — dashboard will not open automatically');
 
   const spinner = ora('Loading configuration…').start();
   const config = await loadConfig(projectRoot);
   spinner.succeed('Configuration loaded');
 
   const engine = new InferenceEngine(defaultDefinitions, projectRoot);
-  const records = [];
+  const records: NormalizedRunRecord[] = [];
 
   for (const connectorConfig of config.dashboard.connectors) {
     const connector = CONNECTORS.find(c => c.id === connectorConfig.id);
