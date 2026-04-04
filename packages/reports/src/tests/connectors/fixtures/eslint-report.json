@@ -1,0 +1,42 @@
+[
+  {
+    "filePath": "/project/src/auth/auth.service.ts",
+    "messages": [
+      {
+        "ruleId": "no-unused-vars",
+        "severity": 2,
+        "message": "'token' is defined but never used.",
+        "line": 14,
+        "column": 7
+      }
+    ],
+    "errorCount": 1,
+    "warningCount": 0,
+    "fixableErrorCount": 1,
+    "fixableWarningCount": 0
+  },
+  {
+    "filePath": "/project/src/payments/payment.service.ts",
+    "messages": [],
+    "errorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0
+  },
+  {
+    "filePath": "/project/src/auth/auth.utils.ts",
+    "messages": [
+      {
+        "ruleId": "prefer-const",
+        "severity": 1,
+        "message": "'x' is never reassigned. Use 'const' instead.",
+        "line": 3,
+        "column": 3
+      }
+    ],
+    "errorCount": 0,
+    "warningCount": 1,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 1
+  }
+]
