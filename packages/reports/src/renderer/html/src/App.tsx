@@ -1,26 +1,53 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { LayerHealth } from './views/LayerHealth.tsx'
 import { Overview } from './views/Overview.tsx'
 import { E2EConfidence } from './views/E2EConfidence.tsx'
+import { Drilldown } from './views/Drilldown.tsx'
 import type { DashboardData } from './types.ts'
 
-declare global {
-  interface Window {
-    __SPASCO_DATA__: DashboardData
-  }
-}
-
-type TabId = 'overview' | 'layer-health' | 'e2e'
+type TabId = 'overview' | 'layer-health' | 'e2e' | 'drilldown'
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'overview', label: 'Overview' },
   { id: 'layer-health', label: 'Layer Health' },
   { id: 'e2e', label: 'E2E Confidence' },
+  { id: 'drilldown', label: 'Drill Down' },
 ]
 
 export function App() {
-  const data: DashboardData = window.__SPASCO_DATA__
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabId>('overview')
+
+  useEffect(() => {
+    fetch('data/summary.json')
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status} loading data/summary.json`)
+        return r.json() as Promise<DashboardData>
+      })
+      .then(setData)
+      .catch(e => setLoadError((e as Error).message))
+  }, [])
+
+  if (loadError) {
+    return (
+      <div className="spasco-root">
+        <div className="spasco-error">
+          Failed to load dashboard: {loadError}
+          <br />
+          <small>Serve this directory over HTTP — do not open index.html as a file.</small>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="spasco-root">
+        <div className="spasco-loading">Loading…</div>
+      </div>
+    )
+  }
 
   return (
     <div className="spasco-root">
@@ -58,6 +85,7 @@ export function App() {
         )}
         {activeTab === 'layer-health' && <LayerHealth dimensions={data.dimensions} />}
         {activeTab === 'e2e' && <E2EConfidence playwrightData={data.byConnector?.['playwright']} />}
+        {activeTab === 'drilldown' && <Drilldown />}
       </main>
     </div>
   )
