@@ -1,0 +1,19 @@
+{
+  "uuid": "abc-001",
+  "name": "should create user",
+  "fullName": "UserRepository > should create user",
+  "status": "passed",
+  "start": 1711929600000,
+  "stop": 1711929601200,
+  "labels": [
+    { "name": "feature", "value": "User Management" },
+    { "name": "suite", "value": "UserRepository" },
+    {
+      "name": "testSourceFile",
+      "value": "src/repositories/userRepository.test.ts"
+    }
+  ],
+  "parameters": [],
+  "attachments": [],
+  "steps": []
+}

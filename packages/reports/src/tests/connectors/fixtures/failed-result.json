@@ -1,0 +1,20 @@
+{
+  "uuid": "abc-002",
+  "name": "should reject invalid email",
+  "fullName": "AuthService > should reject invalid email",
+  "status": "failed",
+  "start": 1711929602000,
+  "stop": 1711929602500,
+  "statusDetails": {
+    "message": "Expected true to be false",
+    "trace": "Error: Expected true to be false\n  at AuthService.test.ts:42"
+  },
+  "labels": [
+    { "name": "feature", "value": "Authentication" },
+    { "name": "suite", "value": "AuthService" },
+    { "name": "testSourceFile", "value": "app/auth/authService.test.ts" }
+  ],
+  "parameters": [],
+  "attachments": [],
+  "steps": []
+}
