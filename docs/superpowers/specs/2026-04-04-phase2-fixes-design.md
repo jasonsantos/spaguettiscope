@@ -232,6 +232,31 @@ configured a `layer` dimension gets a layer filter automatically.
 
 ---
 
+## Fix 5: Connector Display Metadata
+
+### What
+
+`Overview.tsx` currently uses hardcoded sets (`COVERAGE_CONNECTORS`, `LINT_CONNECTORS`) to decide
+whether to label a connector's pass rate as "covered", "clean", or "passing". Adding a new connector
+type requires editing the renderer.
+
+### Solution
+
+Each connector declares a `category` on its class: `'testing' | 'coverage' | 'lint'`. The
+`ConnectorAggregation` type carries this field. `Overview.tsx` reads `category` from the data and
+derives the label — no hardcoded sets.
+
+### Change scope
+
+- `packages/reports/src/connectors/interface.ts`: add `readonly category: ConnectorCategory` to the
+  `Connector` interface
+- Each connector class: add `readonly category` declaration
+- `packages/reports/src/aggregator/index.ts`: include `category` in `ConnectorAggregation`
+- `packages/reports/src/renderer/html/src/views/Overview.tsx`: derive label from
+  `aggregation.category` instead of set membership
+
+---
+
 ## What This Does NOT Change
 
 - Connector read logic (`AllureConnector`, `PlaywrightConnector`, etc.) — connectors produce
