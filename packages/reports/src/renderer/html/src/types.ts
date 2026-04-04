@@ -6,4 +6,5 @@ export type {
   ConnectorAggregation,
   OverallSummary,
 } from '../../../../../aggregator/index.ts'
+export type { ConnectorCategory } from '../../../../../connectors/interface.ts'
 export type { HistoryEntry } from '../../../../../model/history.ts'

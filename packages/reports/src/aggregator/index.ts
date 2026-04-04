@@ -1,5 +1,6 @@
 import type { DimensionName } from '@spaguettiscope/core';
 import type { NormalizedRunRecord, TestStatus } from '../model/normalized.js';
+import type { ConnectorCategory } from '../connectors/interface.js'
 
 export interface AggregatedSlice {
   dimension: DimensionName;
@@ -87,10 +88,12 @@ export function aggregateAll(records: NormalizedRunRecord[]): AggregationResult 
 export interface ConnectorAggregation {
   overall: OverallSummary
   dimensions: Record<string, AggregatedSlice[]>
+  category: ConnectorCategory
 }
 
 export function aggregateByConnector(
-  records: NormalizedRunRecord[]
+  records: NormalizedRunRecord[],
+  categoryMap: Record<string, ConnectorCategory> = {}
 ): Record<string, ConnectorAggregation> {
   const groups = new Map<string, NormalizedRunRecord[]>()
 
@@ -111,6 +114,7 @@ export function aggregateByConnector(
           .filter(([k, v]) => k !== 'overall' && Array.isArray(v))
           .map(([k, v]) => [k, v as AggregatedSlice[]])
       ),
+      category: categoryMap[connectorId] ?? 'testing',
     }
   }
 

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { InferenceEngine, ConnectorConfig } from '@spaguettiscope/core';
-import type { Connector } from './interface.js';
+import type { Connector, ConnectorCategory } from './interface.js';
 import type { NormalizedRunRecord, TestStatus } from '../model/normalized.js';
 
 interface AllureLabel {
@@ -34,6 +34,7 @@ function slugify(value: string): string {
 
 export class AllureConnector implements Connector {
   readonly id = 'allure';
+  readonly category: ConnectorCategory = 'testing';
 
   async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
     const { resultsDir } = config;

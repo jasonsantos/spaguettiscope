@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import type { ConnectorConfig, InferenceEngine } from '@spaguettiscope/core';
-import type { Connector } from './interface.js';
+import type { Connector, ConnectorCategory } from './interface.js';
 import type { NormalizedRunRecord, TestStatus } from '../model/normalized.js';
 
 interface PlaywrightResult {
@@ -56,6 +56,7 @@ function collectSpecs(
 
 export class PlaywrightConnector implements Connector {
   readonly id = 'playwright';
+  readonly category: ConnectorCategory = 'testing';
 
   async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
     const reportFile = (config as Record<string, unknown>).reportFile

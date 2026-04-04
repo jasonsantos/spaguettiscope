@@ -2,11 +2,12 @@ import { readFileSync } from 'node:fs'
 import { basename } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { ConnectorConfig, InferenceEngine } from '@spaguettiscope/core'
-import type { Connector } from './interface.js'
+import type { Connector, ConnectorCategory } from './interface.js'
 import type { NormalizedRunRecord } from '../model/normalized.js'
 
 export class TypescriptConnector implements Connector {
   readonly id = 'typescript'
+  readonly category: ConnectorCategory = 'lint'
 
   async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
     const outputFile = (config as Record<string, unknown>).outputFile

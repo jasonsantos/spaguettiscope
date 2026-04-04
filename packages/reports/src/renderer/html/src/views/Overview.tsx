@@ -16,9 +16,6 @@ const CONNECTOR_LABELS: Record<string, string> = {
   typescript: 'TypeScript',
 }
 
-const COVERAGE_CONNECTORS = new Set(['lcov'])
-const LINT_CONNECTORS = new Set(['eslint', 'typescript'])
-
 function passRateColor(rate: number): string {
   if (rate >= 0.9) return '#22c55e'
   if (rate >= 0.7) return '#f97316'
@@ -26,25 +23,28 @@ function passRateColor(rate: number): string {
 }
 
 function ConnectorCard({ id, aggregation }: { id: string; aggregation: ConnectorAggregation }) {
-  const { overall } = aggregation
+  const { overall, category } = aggregation
   const label = CONNECTOR_LABELS[id] ?? id
   const pct = (overall.passRate * 100).toFixed(1)
   const color = passRateColor(overall.passRate)
-  const isCoverage = COVERAGE_CONNECTORS.has(id)
-  const isLint = LINT_CONNECTORS.has(id)
+
+  const rateLabel =
+    category === 'coverage' ? `${pct}% covered`
+    : category === 'lint' ? `${pct}% clean`
+    : `${pct}% passing`
+
+  const unitLabel = category === 'testing' ? 'tests' : 'files'
 
   return (
     <div className="connector-card">
       <div className="connector-card-header">
         <span className="connector-name">{label}</span>
-        <span className="connector-rate" style={{ color }}>
-          {isCoverage ? `${pct}% covered` : isLint ? `${pct}% clean` : `${pct}% passing`}
-        </span>
+        <span className="connector-rate" style={{ color }}>{rateLabel}</span>
       </div>
       <div className="connector-card-stats">
         <span className="stat">
           <span className="stat-value">{overall.total}</span>
-          <span className="stat-label">{isCoverage || isLint ? 'files' : 'tests'}</span>
+          <span className="stat-label">{unitLabel}</span>
         </span>
         {overall.failed > 0 && (
           <span className="stat stat-failed">
@@ -71,9 +71,7 @@ export function Overview({ connectors, overall, byConnector }: OverviewProps) {
     <div className="overview">
       <div className="overall-card">
         <span className="overall-label">All connectors</span>
-        <span className="overall-pct" style={{ color: overallColor }}>
-          {overallPct}%
-        </span>
+        <span className="overall-pct" style={{ color: overallColor }}>{overallPct}%</span>
         <span className="overall-total">{overall.total} total records</span>
       </div>
 

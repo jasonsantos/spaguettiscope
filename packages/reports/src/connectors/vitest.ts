@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import type { ConnectorConfig, InferenceEngine } from '@spaguettiscope/core'
-import type { Connector } from './interface.js'
+import type { Connector, ConnectorCategory } from './interface.js'
 import type { NormalizedRunRecord, TestStatus } from '../model/normalized.js'
 
 interface VitestAssertionResult {
@@ -39,6 +39,7 @@ const STATUS_MAP: Record<VitestAssertionResult['status'], TestStatus> = {
 
 export class VitestConnector implements Connector {
   readonly id = 'vitest'
+  readonly category: ConnectorCategory = 'testing'
 
   async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
     const reportFile = (config as Record<string, unknown>).reportFile

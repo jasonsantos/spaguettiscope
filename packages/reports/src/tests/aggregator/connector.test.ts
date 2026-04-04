@@ -19,7 +19,7 @@ function makeRecord(overrides: Partial<NormalizedRunRecord>): NormalizedRunRecor
 
 describe('aggregateByConnector', () => {
   it('returns empty object for empty records', () => {
-    expect(aggregateByConnector([])).toEqual({})
+    expect(aggregateByConnector([], {})).toEqual({})
   })
 
   it('groups records by connectorId', () => {
@@ -28,10 +28,28 @@ describe('aggregateByConnector', () => {
       makeRecord({ connectorId: 'playwright' }),
       makeRecord({ connectorId: 'playwright' }),
     ]
-    const result = aggregateByConnector(records)
+    const categoryMap = { allure: 'testing', playwright: 'testing' } as const
+    const result = aggregateByConnector(records, categoryMap)
     expect(Object.keys(result).sort()).toEqual(['allure', 'playwright'])
     expect(result['allure'].overall.total).toBe(1)
     expect(result['playwright'].overall.total).toBe(2)
+  })
+
+  it('includes category from categoryMap in each group', () => {
+    const records = [
+      makeRecord({ connectorId: 'lcov', dimensions: {} }),
+      makeRecord({ connectorId: 'eslint', dimensions: {} }),
+    ]
+    const categoryMap = { lcov: 'coverage', eslint: 'lint' } as const
+    const result = aggregateByConnector(records, categoryMap)
+    expect(result['lcov'].category).toBe('coverage')
+    expect(result['eslint'].category).toBe('lint')
+  })
+
+  it('defaults category to testing when not in categoryMap', () => {
+    const records = [makeRecord({ connectorId: 'vitest', dimensions: {} })]
+    const result = aggregateByConnector(records, {})
+    expect(result['vitest'].category).toBe('testing')
   })
 
   it('each group has overall and dimensions', () => {
@@ -39,7 +57,7 @@ describe('aggregateByConnector', () => {
       makeRecord({ connectorId: 'vitest', status: 'passed' }),
       makeRecord({ connectorId: 'vitest', status: 'failed' }),
     ]
-    const result = aggregateByConnector(records)
+    const result = aggregateByConnector(records, { vitest: 'testing' })
     expect(result['vitest'].overall.passed).toBe(1)
     expect(result['vitest'].overall.failed).toBe(1)
     expect(result['vitest'].dimensions).toHaveProperty('role')

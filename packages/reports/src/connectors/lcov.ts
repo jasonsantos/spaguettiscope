@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { basename } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { ConnectorConfig, InferenceEngine } from '@spaguettiscope/core'
-import type { Connector } from './interface.js'
+import type { Connector, ConnectorCategory } from './interface.js'
 import type { NormalizedRunRecord, TestStatus } from '../model/normalized.js'
 
 const DEFAULT_THRESHOLD = 80
@@ -36,6 +36,7 @@ function parseLcov(content: string): LcovRecord[] {
 
 export class LcovConnector implements Connector {
   readonly id = 'lcov'
+  readonly category: ConnectorCategory = 'coverage'
 
   async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
     const cfg = config as Record<string, unknown>
