@@ -1,0 +1,81 @@
+{
+  "config": { "rootDir": "/project" },
+  "suites": [
+    {
+      "title": "auth.spec.ts",
+      "file": "tests/auth.spec.ts",
+      "specs": [
+        {
+          "title": "login succeeds",
+          "ok": true,
+          "tests": [
+            {
+              "timeout": 30000,
+              "projectName": "chromium",
+              "results": [
+                {
+                  "status": "passed",
+                  "duration": 1234,
+                  "retry": 0,
+                  "startTime": "2026-01-01T00:00:00.000Z"
+                }
+              ],
+              "status": "expected"
+            }
+          ]
+        },
+        {
+          "title": "logout fails gracefully",
+          "ok": false,
+          "tests": [
+            {
+              "timeout": 30000,
+              "projectName": "chromium",
+              "results": [
+                {
+                  "status": "failed",
+                  "duration": 800,
+                  "retry": 0,
+                  "startTime": "2026-01-01T00:00:01.000Z"
+                }
+              ],
+              "status": "unexpected"
+            }
+          ]
+        }
+      ],
+      "suites": [
+        {
+          "title": "nested describe",
+          "file": "tests/auth.spec.ts",
+          "specs": [
+            {
+              "title": "skipped test",
+              "ok": true,
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "status": "skipped",
+                      "duration": 0,
+                      "retry": 0,
+                      "startTime": "2026-01-01T00:00:02.000Z"
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ]
+            }
+          ],
+          "suites": []
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "startTime": "2026-01-01T00:00:00.000Z",
+    "duration": 2034
+  }
+}
