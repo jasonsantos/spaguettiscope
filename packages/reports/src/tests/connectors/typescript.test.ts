@@ -35,11 +35,18 @@ describe('TypescriptConnector', () => {
     expect(records.every(r => r.connectorId === 'typescript')).toBe(true)
   })
 
-  it('returns empty array when output contains no error lines', async () => {
+  it('deduplicates multiple errors for the same file into one record', async () => {
     const connector = new TypescriptConnector()
     // The fixture only has 2 unique files — confirm no unexpected extras
     const records = await connector.read({ id: 'typescript', outputFile: FIXTURE }, engine)
     const files = new Set(records.map(r => r.source.file))
     expect(files.size).toBe(2)
+  })
+
+  it('returns empty array when output contains no error lines', async () => {
+    const connector = new TypescriptConnector()
+    const emptyFixture = join(__dirname, 'fixtures/tsc-output-clean.txt')
+    const records = await connector.read({ id: 'typescript', outputFile: emptyFixture }, engine)
+    expect(records).toHaveLength(0)
   })
 })

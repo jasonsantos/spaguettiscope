@@ -5,9 +5,6 @@ import type { ConnectorConfig, InferenceEngine } from '@spaguettiscope/core'
 import type { Connector } from './interface.js'
 import type { NormalizedRunRecord } from '../model/normalized.js'
 
-// Matches: /abs/path/to/file.ts(line,col): error TSxxxx: message
-const ERROR_PATTERN = /^(.+?)\((\d+),(\d+)\): error TS\d+: (.+)$/gm
-
 export class TypescriptConnector implements Connector {
   readonly id = 'typescript'
 
@@ -25,11 +22,12 @@ export class TypescriptConnector implements Connector {
     const runAt = new Date().toISOString()
 
     // Group error messages by file path
+    // Matches: /abs/path/to/file.ts(line,col): error TSxxxx: message
+    const errorPattern = /^(.+?)\((\d+),(\d+)\): error TS\d+: (.+)$/gm
     const errorsByFile = new Map<string, string[]>()
     let match: RegExpExecArray | null
 
-    ERROR_PATTERN.lastIndex = 0
-    while ((match = ERROR_PATTERN.exec(content)) !== null) {
+    while ((match = errorPattern.exec(content)) !== null) {
       const [, filePath, , , message] = match
       const existing = errorsByFile.get(filePath) ?? []
       existing.push(message)
