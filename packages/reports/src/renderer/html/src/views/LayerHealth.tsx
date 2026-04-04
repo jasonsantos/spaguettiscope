@@ -18,6 +18,7 @@ const STATUS_COLORS = {
   failed: '#ef4444',
   skipped: '#a3a3a3',
   broken: '#f97316',
+  unknown: '#6b7280',
 };
 
 function DimensionPanel({ name, slices }: { name: string; slices: AggregatedSlice[] }) {
@@ -38,6 +39,7 @@ function DimensionPanel({ name, slices }: { name: string; slices: AggregatedSlic
           <Bar dataKey="failed" stackId="a" fill={STATUS_COLORS.failed} />
           <Bar dataKey="skipped" stackId="a" fill={STATUS_COLORS.skipped} />
           <Bar dataKey="broken" stackId="a" fill={STATUS_COLORS.broken} />
+          <Bar dataKey="unknown" stackId="a" fill={STATUS_COLORS.unknown} />
         </BarChart>
       </ResponsiveContainer>
       <table className="slice-table">
