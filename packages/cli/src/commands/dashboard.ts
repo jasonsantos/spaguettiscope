@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, mkdirSync, cpSync, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import ora from 'ora'
 import { loadConfig, InferenceEngine, defaultDefinitions } from '@spaguettiscope/core'
@@ -12,6 +12,7 @@ import {
   aggregateAll,
   aggregateByConnector,
   buildDashboardHtml,
+  getRendererAssetsDir,
   formatTerminalSummary,
   appendHistory,
   type DashboardData,
@@ -113,6 +114,13 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
     const html = buildDashboardHtml(dashboardData)
     const outputPath = join(outputDir, 'index.html')
     writeFileSync(outputPath, html, 'utf-8')
+
+    // Copy renderer assets (JS bundle) alongside index.html
+    const rendererDist = getRendererAssetsDir()
+    if (existsSync(rendererDist)) {
+      cpSync(rendererDist, join(outputDir, 'assets'), { recursive: true })
+    }
+
     printSuccess(`Dashboard generated → ${outputPath}`)
   }
 

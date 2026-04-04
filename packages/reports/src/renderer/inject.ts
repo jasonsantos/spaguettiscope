@@ -5,6 +5,10 @@ import type { DashboardData } from '../model/dashboard.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+export function getRendererAssetsDir(): string {
+  return join(__dirname, '../../dist/renderer/assets');
+}
+
 export function buildDashboardHtml(data: DashboardData): string {
   // In production, this reads from the pre-built Vite output in dist/renderer/
   // In development (no dist), falls back to a minimal HTML for debugging
