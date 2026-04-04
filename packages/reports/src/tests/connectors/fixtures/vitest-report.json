@@ -1,0 +1,46 @@
+{
+  "numTotalTestSuites": 1,
+  "numPassedTestSuites": 0,
+  "numFailedTestSuites": 1,
+  "numTotalTests": 3,
+  "numPassedTests": 1,
+  "numFailedTests": 1,
+  "numPendingTests": 1,
+  "startTime": 1711929600000,
+  "success": false,
+  "testResults": [
+    {
+      "testFilePath": "/project/src/auth/auth.service.test.ts",
+      "status": "failed",
+      "startTime": 1711929600000,
+      "endTime": 1711929601500,
+      "message": "",
+      "assertionResults": [
+        {
+          "ancestorTitles": ["AuthService"],
+          "fullName": "AuthService > validates token",
+          "status": "passed",
+          "title": "validates token",
+          "duration": 5,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": ["AuthService"],
+          "fullName": "AuthService > rejects expired token",
+          "status": "failed",
+          "title": "rejects expired token",
+          "duration": 12,
+          "failureMessages": ["Expected 401 but got 200"]
+        },
+        {
+          "ancestorTitles": ["AuthService"],
+          "fullName": "AuthService > skips inactive users",
+          "status": "pending",
+          "title": "skips inactive users",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ]
+    }
+  ]
+}

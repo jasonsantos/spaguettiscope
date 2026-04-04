@@ -1,0 +1,73 @@
+import { readFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
+import type { ConnectorConfig, InferenceEngine } from '@spaguettiscope/core'
+import type { Connector } from './interface.js'
+import type { NormalizedRunRecord, TestStatus } from '../model/normalized.js'
+
+interface VitestAssertionResult {
+  ancestorTitles: string[]
+  fullName: string
+  status: 'passed' | 'failed' | 'pending' | 'skipped' | 'todo'
+  title: string
+  duration: number | null
+  failureMessages: string[]
+}
+
+interface VitestTestResult {
+  testFilePath: string
+  status: 'passed' | 'failed'
+  startTime: number
+  endTime: number
+  assertionResults: VitestAssertionResult[]
+}
+
+interface VitestReport {
+  testResults: VitestTestResult[]
+  startTime: number
+  success: boolean
+}
+
+const STATUS_MAP: Record<VitestAssertionResult['status'], TestStatus> = {
+  passed: 'passed',
+  failed: 'failed',
+  pending: 'skipped',
+  skipped: 'skipped',
+  todo: 'skipped',
+}
+
+export class VitestConnector implements Connector {
+  readonly id = 'vitest'
+
+  async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
+    const { reportFile } = config as { reportFile: string }
+    let report: VitestReport
+    try {
+      report = JSON.parse(readFileSync(reportFile, 'utf-8')) as VitestReport
+    } catch (err) {
+      throw new Error(`VitestConnector: could not read report at ${reportFile}: ${(err as Error).message}`)
+    }
+    const records: NormalizedRunRecord[] = []
+
+    for (const suite of report.testResults) {
+      const runAt = new Date(suite.startTime).toISOString()
+      const dimensions = engine.infer(suite.testFilePath)
+
+      for (const assertion of suite.assertionResults) {
+        records.push({
+          id: randomUUID(),
+          connectorId: this.id,
+          runAt,
+          name: assertion.title,
+          fullName: assertion.fullName,
+          status: STATUS_MAP[assertion.status] ?? 'unknown',
+          duration: assertion.duration ?? 0,
+          dimensions,
+          source: { file: suite.testFilePath, connectorId: this.id },
+          metadata: { failureMessages: assertion.failureMessages },
+        })
+      }
+    }
+
+    return records
+  }
+}
