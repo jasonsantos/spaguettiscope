@@ -7,6 +7,7 @@ export * from './connectors/playwright.js';
 export * from './connectors/vitest.js';
 export * from './connectors/lcov.js';
 export * from './connectors/eslint.js';
+export * from './connectors/typescript.js';
 export * from './aggregator/index.js';
 export { buildDashboardHtml } from './renderer/inject.js';
 export { formatTerminalSummary } from './renderer/terminal.js';
