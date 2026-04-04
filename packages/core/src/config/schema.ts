@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { InferenceRule } from '../classification/model.js'
 
 const ConnectorConfigSchema = z.object({
   id: z.string(),
@@ -34,4 +35,4 @@ export const SpascoConfigSchema = z.object({
 
 export type SpascoConfig = z.infer<typeof SpascoConfigSchema>;
 export type ConnectorConfig = z.infer<typeof ConnectorConfigSchema>;
-export type InferenceConfig = Record<string, { glob: string; value: string }[]>
+export type InferenceConfig = Record<string, InferenceRule[]>

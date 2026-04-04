@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { minimatch } from 'minimatch'
-import type { DimensionDefinition, DimensionSet } from './model.js'
+import type { DimensionDefinition, DimensionSet, InferenceRule } from './model.js'
 
 export class InferenceEngine {
   private readonly packageJsonCache = new Map<string, string | undefined>()
@@ -17,7 +17,7 @@ export class InferenceEngine {
   constructor(
     private readonly definitions: DimensionDefinition[],
     private readonly projectRoot: string = process.cwd(),
-    private readonly userRules: Record<string, { glob: string; value: string }[]> = {}
+    private readonly userRules: Record<string, InferenceRule[]> = {}
   ) {}
 
   infer(absoluteFilePath: string): DimensionSet {
@@ -114,7 +114,7 @@ export class InferenceEngine {
       if (segment.startsWith('[')) return undefined; // dynamic param
       const base = segment.replace(/\.\w+$/, ''); // strip extension
       if (InferenceEngine.NEXTJS_RESERVED.has(base)) return undefined;
-      return segment; // first real segment is the domain
+      return base; // first real segment is the domain
     }
 
     return undefined;
