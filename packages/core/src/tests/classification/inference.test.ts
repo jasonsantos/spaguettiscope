@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { InferenceEngine } from '../../classification/inference.js';
 import { defaultDefinitions } from '../../classification/built-in/index.js';
 
@@ -46,3 +49,45 @@ describe('InferenceEngine', () => {
     expect(result).toEqual({});
   });
 });
+
+describe('InferenceEngine — package.json walking', () => {
+  let root: string
+
+  beforeAll(() => {
+    root = join(tmpdir(), `spasco-pkg-test-${Date.now()}`)
+    // root package
+    mkdirSync(join(root), { recursive: true })
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: '@test/root' }))
+    // web app package
+    mkdirSync(join(root, 'apps', 'web', 'src', 'components'), { recursive: true })
+    writeFileSync(join(root, 'apps', 'web', 'package.json'), JSON.stringify({ name: '@test/web' }))
+    // ui package
+    mkdirSync(join(root, 'packages', 'ui', 'src'), { recursive: true })
+    writeFileSync(
+      join(root, 'packages', 'ui', 'package.json'),
+      JSON.stringify({ name: '@test/ui' })
+    )
+  })
+
+  afterAll(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  it('infers package from nearest package.json', () => {
+    const engine = new InferenceEngine(defaultDefinitions, root)
+    const result = engine.infer(join(root, 'apps', 'web', 'src', 'components', 'Button.test.tsx'))
+    expect(result.package).toBe('@test/web')
+  })
+
+  it('infers package for a deeply nested file', () => {
+    const engine = new InferenceEngine(defaultDefinitions, root)
+    const result = engine.infer(join(root, 'packages', 'ui', 'src', 'index.ts'))
+    expect(result.package).toBe('@test/ui')
+  })
+
+  it('falls back to root package.json for files not in a subpackage', () => {
+    const engine = new InferenceEngine(defaultDefinitions, root)
+    const result = engine.infer(join(root, 'some-script.ts'))
+    expect(result.package).toBe('@test/root')
+  })
+})
