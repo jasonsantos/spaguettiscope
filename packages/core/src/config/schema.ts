@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const ConnectorConfigSchema = z.object({
   id: z.string(),
-  resultsDir: z.string(),
+  resultsDir: z.string().optional(),
 }).passthrough();
 
 const CustomDimensionSchema = z.object({

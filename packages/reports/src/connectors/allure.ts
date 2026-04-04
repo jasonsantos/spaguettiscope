@@ -37,6 +37,9 @@ export class AllureConnector implements Connector {
 
   async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
     const { resultsDir } = config;
+    if (typeof resultsDir !== 'string') {
+      throw new Error('AllureConnector: config.resultsDir must be a string path');
+    }
     const resultFiles = readdirSync(resultsDir).filter(f => f.endsWith('-result.json'));
     const records: NormalizedRunRecord[] = [];
 
