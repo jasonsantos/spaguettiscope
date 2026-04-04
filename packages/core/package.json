@@ -2,6 +2,9 @@
   "name": "@spaguettiscope/core",
   "version": "2.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "exports": {
     ".": "./dist/index.js",
     "./classification": "./dist/classification/index.js",
