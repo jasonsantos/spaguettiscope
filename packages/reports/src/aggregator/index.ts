@@ -83,3 +83,35 @@ export function aggregateAll(records: NormalizedRunRecord[]): AggregationResult 
 
   return result;
 }
+
+export interface ConnectorAggregation {
+  overall: OverallSummary
+  dimensions: Record<string, AggregatedSlice[]>
+}
+
+export function aggregateByConnector(
+  records: NormalizedRunRecord[]
+): Record<string, ConnectorAggregation> {
+  const groups = new Map<string, NormalizedRunRecord[]>()
+
+  for (const record of records) {
+    const existing = groups.get(record.connectorId) ?? []
+    existing.push(record)
+    groups.set(record.connectorId, existing)
+  }
+
+  const result: Record<string, ConnectorAggregation> = {}
+
+  for (const [connectorId, connectorRecords] of groups) {
+    const aggregated = aggregateAll(connectorRecords)
+    const { overall, ...rest } = aggregated
+    result[connectorId] = {
+      overall: overall as OverallSummary,
+      dimensions: Object.fromEntries(
+        Object.entries(rest).map(([k, v]) => [k, v as AggregatedSlice[]])
+      ),
+    }
+  }
+
+  return result
+}
