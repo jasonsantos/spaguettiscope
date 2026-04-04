@@ -104,11 +104,12 @@ export function aggregateByConnector(
 
   for (const [connectorId, connectorRecords] of groups) {
     const aggregated = aggregateAll(connectorRecords)
-    const { overall, ...rest } = aggregated
     result[connectorId] = {
-      overall: overall as OverallSummary,
+      overall: aggregated.overall,
       dimensions: Object.fromEntries(
-        Object.entries(rest).map(([k, v]) => [k, v as AggregatedSlice[]])
+        Object.entries(aggregated)
+          .filter(([k, v]) => k !== 'overall' && Array.isArray(v))
+          .map(([k, v]) => [k, v as AggregatedSlice[]])
       ),
     }
   }
