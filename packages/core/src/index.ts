@@ -1,2 +1,2 @@
-export * from './classification/index.ts';
-export * from './config/index.ts';
+export * from './classification/index.js';
+export * from './config/index.js';

@@ -1,11 +1,11 @@
-export { roleDimension } from './role.ts';
-export { domainDimension, inferDomainFromPath } from './domain.ts';
-export { packageDimension } from './package.ts';
+export { roleDimension } from './role.js';
+export { domainDimension, inferDomainFromPath } from './domain.js';
+export { packageDimension } from './package.js';
 
-import { roleDimension } from './role.ts';
-import { domainDimension } from './domain.ts';
-import { packageDimension } from './package.ts';
-import type { DimensionDefinition } from '../model.ts';
+import { roleDimension } from './role.js';
+import { domainDimension } from './domain.js';
+import { packageDimension } from './package.js';
+import type { DimensionDefinition } from '../model.js';
 
 export const defaultDefinitions: DimensionDefinition[] = [
   roleDimension,

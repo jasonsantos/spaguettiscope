@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { roleDimension, domainDimension, packageDimension, defaultDefinitions } from '../../classification/built-in/index.ts';
+import { roleDimension, domainDimension, packageDimension, defaultDefinitions } from '../../classification/built-in/index.js';
 
 describe('built-in dimension definitions', () => {
   it('role dimension has a name of "role"', () => {

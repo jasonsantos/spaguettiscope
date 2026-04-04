@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { InferenceEngine } from '../../classification/inference.ts';
-import { defaultDefinitions } from '../../classification/built-in/index.ts';
+import { InferenceEngine } from '../../classification/inference.js';
+import { defaultDefinitions } from '../../classification/built-in/index.js';
 
 describe('InferenceEngine', () => {
   const engine = new InferenceEngine(defaultDefinitions, '/project');

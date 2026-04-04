@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { loadConfig } from '../../config/loader.ts';
+import { loadConfig } from '../../config/loader.js';
 
 describe('loadConfig', () => {
   let tmpDir: string;

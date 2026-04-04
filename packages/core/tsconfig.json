@@ -10,7 +10,8 @@
     "declarationMap": true,
     "sourceMap": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": ["src/**/*"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "node_modules"]

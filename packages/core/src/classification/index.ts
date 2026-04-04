@@ -1,3 +1,3 @@
-export * from './model.ts';
-export * from './inference.ts';
-export * from './built-in/index.ts';
+export * from './model.js';
+export * from './inference.js';
+export * from './built-in/index.js';

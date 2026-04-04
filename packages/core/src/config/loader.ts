@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { SpascoConfigSchema, type SpascoConfig } from './schema.ts';
+import { SpascoConfigSchema, type SpascoConfig } from './schema.js';
 
 const CONFIG_FILENAME = 'spaguettiscope.config.json';
 

@@ -1,2 +1,2 @@
-export * from './schema.ts';
-export * from './loader.ts';
+export * from './schema.js';
+export * from './loader.js';

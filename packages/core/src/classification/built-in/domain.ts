@@ -1,4 +1,4 @@
-import type { DimensionDefinition, DimensionPattern } from '../model.ts';
+import type { DimensionDefinition, DimensionPattern } from '../model.js';
 
 /**
  * Extracts the domain value from a file path by looking for known structural patterns.

@@ -22,11 +22,11 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "minimatch": "latest",
-    "zod": "latest"
+    "minimatch": "^10.2.5",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "latest",
+    "@types/node": "^25.5.2",
     "typescript": "latest",
     "vitest": "latest"
   }

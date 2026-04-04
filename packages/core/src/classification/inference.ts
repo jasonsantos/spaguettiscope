@@ -1,6 +1,6 @@
 import { minimatch } from 'minimatch';
-import { inferDomainFromPath } from './built-in/domain.ts';
-import type { DimensionDefinition, DimensionSet } from './model.ts';
+import { inferDomainFromPath } from './built-in/domain.js';
+import type { DimensionDefinition, DimensionSet } from './model.js';
 
 export class InferenceEngine {
   constructor(

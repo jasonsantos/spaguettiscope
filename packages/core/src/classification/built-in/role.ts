@@ -1,4 +1,4 @@
-import type { DimensionDefinition } from '../model.ts';
+import type { DimensionDefinition } from '../model.js';
 
 export const roleDimension: DimensionDefinition = {
   name: 'role',
