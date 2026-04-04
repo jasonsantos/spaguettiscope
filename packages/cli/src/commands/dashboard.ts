@@ -111,7 +111,10 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
           .map(([k, v]) => [k, v as AggregatedSlice[]])
       ),
       history,
-      byConnector: aggregateByConnector(records),
+      byConnector: aggregateByConnector(
+        records,
+        Object.fromEntries(CONNECTORS.map(c => [c.id, c.category]))
+      ),
     }
 
     const html = buildDashboardHtml()
