@@ -1,53 +1,30 @@
 {
   "name": "@spaguettiscope/core",
-  "version": "1.1.0",
-  "description": "Framework-agnostic code analysis engine for calculating entropy scores across six dimensions",
-  "main": "src/index.js",
+  "version": "2.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./dist/index.js",
+    "./classification": "./dist/classification/index.js",
+    "./config": "./dist/config/index.js"
   },
   "files": [
-    "src/**/*.js",
-    "README.md",
-    "LICENSE"
+    "dist/**",
+    "README.md"
   ],
   "scripts": {
-    "build": "echo 'Building core...'",
-    "dev": "echo 'Core development mode...'",
-    "test": "echo 'Testing core...'",
-    "lint": "echo 'Linting core...'",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "npm run test && npm run lint"
-  },
-  "keywords": [
-    "code-analysis",
-    "entropy",
-    "complexity",
-    "static-analysis",
-    "technical-debt",
-    "code-quality",
-    "maintainability"
-  ],
-  "author": "Jason Santos",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/jasonsantos/spaguettiscope.git",
-    "directory": "packages/core"
-  },
-  "bugs": {
-    "url": "https://github.com/jasonsantos/spaguettiscope/issues"
-  },
-  "homepage": "https://github.com/jasonsantos/spaguettiscope#readme",
-  "engines": {
-    "node": ">=18.0.0"
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --project tsconfig.json --watch",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
-    "glob": "^10.3.10",
-    "ts-morph": "^20.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "acorn": "^8.11.0",
-    "acorn-walk": "^8.3.0"
+    "minimatch": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
   }
 }

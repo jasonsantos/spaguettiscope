@@ -1,62 +1,40 @@
 {
   "name": "@spaguettiscope/cli",
-  "version": "1.1.0",
-  "description": "Beautiful command-line interface for SpaguettiScope code entropy analyzer",
-  "main": "src/index.js",
+  "version": "2.0.0",
   "type": "module",
   "bin": {
     "spasco": "bin/spasco.js"
   },
   "exports": {
-    ".": "./src/index.js"
+    ".": "./dist/index.js"
   },
   "files": [
-    "src/**/*.js",
-    "bin/**/*.js",
-    "README.md",
-    "LICENSE"
+    "dist/**",
+    "bin/**",
+    "README.md"
   ],
   "scripts": {
-    "build": "echo 'Building CLI...'",
-    "dev": "echo 'CLI development mode...'",
-    "test": "echo 'Testing CLI...'",
-    "lint": "echo 'Linting CLI...'",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "npm run test && npm run lint"
-  },
-  "keywords": [
-    "cli",
-    "code-analysis",
-    "entropy",
-    "spaguettiscope",
-    "terminal",
-    "developer-tools",
-    "static-analysis"
-  ],
-  "author": "Jason Santos",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/jasonsantos/spaguettiscope.git",
-    "directory": "packages/cli"
-  },
-  "bugs": {
-    "url": "https://github.com/jasonsantos/spaguettiscope/issues"
-  },
-  "homepage": "https://github.com/jasonsantos/spaguettiscope#readme",
-  "engines": {
-    "node": ">=18.0.0"
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --project tsconfig.json --watch",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@spaguettiscope/core": "^1.1.0",
-    "commander": "^11.1.0",
-    "chalk": "^5.3.0",
-    "ora": "^7.0.1",
-    "inquirer": "^9.2.12",
-    "figlet": "^1.7.0",
-    "gradient-string": "^2.0.2",
-    "cli-table3": "^0.6.3",
-    "boxen": "^7.1.1",
-    "terminal-link": "^3.0.0"
+    "@spaguettiscope/core": "workspace:*",
+    "@spaguettiscope/reports": "workspace:*",
+    "commander": "latest",
+    "chalk": "latest",
+    "ora": "latest",
+    "figlet": "latest",
+    "gradient-string": "latest",
+    "boxen": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/figlet": "latest",
+    "@types/gradient-string": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
   }
 }

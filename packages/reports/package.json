@@ -1,0 +1,38 @@
+{
+  "name": "@spaguettiscope/reports",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist/**",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "pnpm build:renderer && tsc --project tsconfig.json",
+    "build:renderer": "vite build --config src/renderer/html/vite.config.ts",
+    "dev": "tsc --project tsconfig.json --watch",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@spaguettiscope/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vitejs/plugin-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "recharts": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "vitest": "latest",
+    "@testing-library/react": "latest",
+    "@testing-library/jest-dom": "latest",
+    "jsdom": "latest"
+  }
+}
