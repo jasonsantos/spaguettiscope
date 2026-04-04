@@ -14,7 +14,9 @@ interface VitestAssertionResult {
 }
 
 interface VitestTestResult {
-  testFilePath: string
+  /** Vitest JSON reporter uses 'name' for the file path */
+  name: string
+  testFilePath?: string
   status: 'passed' | 'failed' | 'skipped'
   startTime: number
   endTime: number
@@ -52,8 +54,9 @@ export class VitestConnector implements Connector {
     const records: NormalizedRunRecord[] = []
 
     for (const suite of report.testResults) {
+      const filePath = suite.name ?? suite.testFilePath ?? ''
       const runAt = new Date(suite.startTime).toISOString()
-      const dimensions = engine.infer(suite.testFilePath)
+      const dimensions = engine.infer(filePath)
 
       for (const assertion of suite.assertionResults) {
         records.push({
@@ -65,7 +68,7 @@ export class VitestConnector implements Connector {
           status: STATUS_MAP[assertion.status] ?? 'unknown',
           duration: assertion.duration ?? 0,
           dimensions,
-          source: { file: suite.testFilePath, connectorId: this.id },
+          source: { file: filePath, connectorId: this.id },
           metadata: { failureMessages: assertion.failureMessages },
         })
       }

@@ -10,7 +10,7 @@
   "success": false,
   "testResults": [
     {
-      "testFilePath": "/project/src/auth/auth.service.test.ts",
+      "name": "/project/src/auth/auth.service.test.ts",
       "status": "failed",
       "startTime": 1711929600000,
       "endTime": 1711929601500,
