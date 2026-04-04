@@ -15,7 +15,7 @@ interface VitestAssertionResult {
 
 interface VitestTestResult {
   testFilePath: string
-  status: 'passed' | 'failed'
+  status: 'passed' | 'failed' | 'skipped'
   startTime: number
   endTime: number
   assertionResults: VitestAssertionResult[]
@@ -39,7 +39,10 @@ export class VitestConnector implements Connector {
   readonly id = 'vitest'
 
   async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
-    const { reportFile } = config as { reportFile: string }
+    const reportFile = (config as Record<string, unknown>).reportFile
+    if (typeof reportFile !== 'string') {
+      throw new Error('VitestConnector: config.reportFile must be a string path')
+    }
     let report: VitestReport
     try {
       report = JSON.parse(readFileSync(reportFile, 'utf-8')) as VitestReport

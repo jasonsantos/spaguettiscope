@@ -12,14 +12,14 @@ describe('VitestConnector', () => {
   it('reads all assertion results', async () => {
     const connector = new VitestConnector()
     const records = await connector.read({ id: 'vitest', reportFile: FIXTURE }, engine)
-    expect(records).toHaveLength(3)
+    expect(records).toHaveLength(5)
   })
 
   it('maps vitest statuses to normalized statuses', async () => {
     const connector = new VitestConnector()
     const records = await connector.read({ id: 'vitest', reportFile: FIXTURE }, engine)
     const statuses = records.map(r => r.status).sort()
-    expect(statuses).toEqual(['failed', 'passed', 'skipped'])
+    expect(statuses).toEqual(['failed', 'passed', 'skipped', 'skipped', 'skipped'])
   })
 
   it('sets connectorId to vitest', async () => {
@@ -39,5 +39,12 @@ describe('VitestConnector', () => {
     const records = await connector.read({ id: 'vitest', reportFile: FIXTURE }, engine)
     const passed = records.find(r => r.status === 'passed')!
     expect(passed.fullName).toBe('AuthService > validates token')
+  })
+
+  it('maps skipped and todo statuses to skipped', async () => {
+    const connector = new VitestConnector()
+    const records = await connector.read({ id: 'vitest', reportFile: FIXTURE }, engine)
+    const skippedCount = records.filter(r => r.status === 'skipped').length
+    expect(skippedCount).toBe(3) // pending + skipped + todo
   })
 })

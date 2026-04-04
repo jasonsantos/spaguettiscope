@@ -2,10 +2,10 @@
   "numTotalTestSuites": 1,
   "numPassedTestSuites": 0,
   "numFailedTestSuites": 1,
-  "numTotalTests": 3,
+  "numTotalTests": 5,
   "numPassedTests": 1,
   "numFailedTests": 1,
-  "numPendingTests": 1,
+  "numPendingTests": 3,
   "startTime": 1711929600000,
   "success": false,
   "testResults": [
@@ -37,6 +37,22 @@
           "fullName": "AuthService > skips inactive users",
           "status": "pending",
           "title": "skips inactive users",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": ["AuthService"],
+          "fullName": "AuthService > skips explicitly",
+          "status": "skipped",
+          "title": "skips explicitly",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "ancestorTitles": ["AuthService"],
+          "fullName": "AuthService > todo test",
+          "status": "todo",
+          "title": "todo test",
           "duration": 0,
           "failureMessages": []
         }
