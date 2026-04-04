@@ -53,7 +53,7 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
   const config = await loadConfig(projectRoot)
   spinner.succeed('Configuration loaded')
 
-  const engine = new InferenceEngine(defaultDefinitions, projectRoot)
+  const engine = new InferenceEngine(defaultDefinitions, projectRoot, config.inference ?? {})
   const records: NormalizedRunRecord[] = []
 
   for (const connectorConfig of config.dashboard.connectors) {

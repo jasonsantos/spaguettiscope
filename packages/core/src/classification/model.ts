@@ -21,3 +21,9 @@ export interface DimensionDefinition {
 
 export const BUILT_IN_DIMENSION_NAMES = ['role', 'domain', 'package'] as const;
 export type BuiltInDimensionName = (typeof BUILT_IN_DIMENSION_NAMES)[number];
+
+/** A user-configured rule mapping a glob pattern to a dimension value. */
+export interface InferenceRule {
+  glob: string
+  value: string
+}

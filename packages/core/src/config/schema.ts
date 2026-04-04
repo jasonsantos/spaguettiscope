@@ -15,10 +15,16 @@ const DimensionOverridesSchema = z.object({
   custom: z.array(CustomDimensionSchema).optional(),
 }).optional();
 
+const InferenceRuleSchema = z.object({
+  glob: z.string(),
+  value: z.string(),
+})
+
 export const SpascoConfigSchema = z.object({
   name: z.string().optional(),
   plugin: z.string().optional(),
   dimensions: DimensionOverridesSchema,
+  inference: z.record(z.string(), z.array(InferenceRuleSchema)).optional(),
   dashboard: z.object({
     connectors: z.array(ConnectorConfigSchema).default([]),
     outputDir: z.string().default('./reports'),
@@ -28,3 +34,4 @@ export const SpascoConfigSchema = z.object({
 
 export type SpascoConfig = z.infer<typeof SpascoConfigSchema>;
 export type ConnectorConfig = z.infer<typeof ConnectorConfigSchema>;
+export type InferenceConfig = Record<string, { glob: string; value: string }[]>

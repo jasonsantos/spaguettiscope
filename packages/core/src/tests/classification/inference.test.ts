@@ -38,6 +38,26 @@ describe('InferenceEngine', () => {
     const result = emptyEngine.infer('/project/src/anything.ts');
     expect(result).toEqual({});
   });
+
+  it('applies user config rules as highest-priority override', () => {
+    const engineWithRules = new InferenceEngine(defaultDefinitions, '/project', {
+      domain: [{ glob: '**/field-behaviors/**', value: 'field-behaviors' }],
+      layer: [{ glob: '**/*.unit.test.ts', value: 'unit' }],
+    })
+    const domainResult = engineWithRules.infer('/project/src/field-behaviors/validation/test.spec.ts')
+    expect(domainResult.domain).toBe('field-behaviors')
+
+    const layerResult = engineWithRules.infer('/project/src/auth/auth.unit.test.ts')
+    expect(layerResult.layer).toBe('unit')
+  })
+
+  it('user config rule overrides inferred value', () => {
+    const engineWithRules = new InferenceEngine(defaultDefinitions, '/project', {
+      role: [{ glob: '**/__tests__/**', value: 'integration' }],
+    })
+    const result = engineWithRules.infer('/project/src/__tests__/api.test.ts')
+    expect(result.role).toBe('integration') // overrides the built-in 'test'
+  })
 });
 
 describe('InferenceEngine — package.json walking', () => {
