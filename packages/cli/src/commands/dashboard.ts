@@ -15,6 +15,7 @@ import {
   getRendererAssetsDir,
   formatTerminalSummary,
   appendHistory,
+  readHistory,
   type DashboardData,
   type AggregatedSlice,
   type NormalizedRunRecord,
@@ -76,8 +77,8 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
   const outputDir = resolve(projectRoot, options.output ?? config.dashboard.outputDir)
   mkdirSync(outputDir, { recursive: true })
 
-  // Append to history
-  await appendHistory(resolve(projectRoot, config.dashboard.historyFile), {
+  const historyPath = resolve(projectRoot, config.dashboard.historyFile)
+  await appendHistory(historyPath, {
     runAt: new Date().toISOString(),
     connectors: config.dashboard.connectors.map(c => c.id),
     overall: aggregated.overall,
@@ -95,6 +96,7 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
         ])
     ),
   })
+  const history = await readHistory(historyPath)
 
   if (!options.ci) {
     const dashboardData: DashboardData = {
@@ -107,7 +109,7 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
           .filter(([k]) => k !== 'overall')
           .map(([k, v]) => [k, v as AggregatedSlice[]])
       ),
-      history: [],
+      history,
       byConnector: aggregateByConnector(records),
     }
 

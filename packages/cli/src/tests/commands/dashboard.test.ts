@@ -64,4 +64,34 @@ describe('runDashboard', () => {
     const html = readFileSync(join(outputDir, 'index.html'), 'utf-8');
     expect(html).toContain('__SPASCO_DATA__');
   });
+
+  it('writes history file and reads it back on second run', async () => {
+    const allureDir = join(tmpDir, 'allure-results')
+    mkdirSync(allureDir)
+    writeFileSync(
+      join(allureDir, 'test-001-result.json'),
+      JSON.stringify({
+        uuid: 'test-001',
+        name: 'sample test',
+        fullName: 'Suite > sample test',
+        status: 'passed',
+        start: Date.now() - 500,
+        stop: Date.now(),
+        labels: [],
+      })
+    )
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ dashboard: { connectors: [{ id: 'allure', resultsDir: allureDir }] } })
+    )
+    const outputDir = join(tmpDir, 'reports')
+    // First run — history file doesn't exist yet
+    await runDashboard({ ci: true, output: outputDir, projectRoot: tmpDir })
+    const historyPath = join(tmpDir, 'reports', '.spaguetti-history.jsonl')
+    expect(existsSync(historyPath)).toBe(true)
+    // Second run — history file exists; should be read back
+    await runDashboard({ ci: true, output: outputDir, projectRoot: tmpDir })
+    const lines = readFileSync(historyPath, 'utf-8').trim().split('\n')
+    expect(lines).toHaveLength(2)
+  })
 });
