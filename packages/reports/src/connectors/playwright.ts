@@ -59,7 +59,12 @@ export class PlaywrightConnector implements Connector {
 
   async read(config: ConnectorConfig, engine: InferenceEngine): Promise<NormalizedRunRecord[]> {
     const { reportFile } = config as { reportFile: string };
-    const report: PlaywrightReport = JSON.parse(readFileSync(reportFile, 'utf-8'));
+    let report: PlaywrightReport;
+    try {
+      report = JSON.parse(readFileSync(reportFile, 'utf-8')) as PlaywrightReport;
+    } catch (err) {
+      throw new Error(`PlaywrightConnector: could not read report at ${reportFile}: ${(err as Error).message}`);
+    }
     const records: NormalizedRunRecord[] = [];
 
     for (const topSuite of report.suites) {

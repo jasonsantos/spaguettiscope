@@ -12,14 +12,14 @@ describe('PlaywrightConnector', () => {
   it('reads all specs from nested suites', async () => {
     const connector = new PlaywrightConnector();
     const records = await connector.read({ id: 'playwright', reportFile: FIXTURE }, engine);
-    expect(records).toHaveLength(3);
+    expect(records).toHaveLength(4);
   });
 
   it('maps playwright statuses to normalized statuses', async () => {
     const connector = new PlaywrightConnector();
     const records = await connector.read({ id: 'playwright', reportFile: FIXTURE }, engine);
     const statuses = records.map(r => r.status).sort();
-    expect(statuses).toEqual(['failed', 'passed', 'skipped']);
+    expect(statuses).toEqual(['broken', 'failed', 'passed', 'skipped']);
   });
 
   it('sets connectorId to playwright', async () => {
@@ -39,5 +39,13 @@ describe('PlaywrightConnector', () => {
     const records = await connector.read({ id: 'playwright', reportFile: FIXTURE }, engine);
     const passed = records.find(r => r.status === 'passed')!;
     expect(passed.duration).toBe(1234);
+  });
+
+  it('maps flaky status to broken', async () => {
+    const connector = new PlaywrightConnector()
+    const records = await connector.read({ id: 'playwright', reportFile: FIXTURE }, engine)
+    const flaky = records.find(r => r.status === 'broken')!
+    expect(flaky).toBeDefined()
+    expect(flaky.duration).toBe(500)
   });
 });

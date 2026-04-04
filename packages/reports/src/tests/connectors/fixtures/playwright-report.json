@@ -42,6 +42,25 @@
               "status": "unexpected"
             }
           ]
+        },
+        {
+          "title": "flaky login",
+          "ok": false,
+          "tests": [
+            {
+              "timeout": 30000,
+              "projectName": "chromium",
+              "results": [
+                {
+                  "status": "flaky",
+                  "duration": 500,
+                  "retry": 1,
+                  "startTime": "2026-01-01T00:00:03.000Z"
+                }
+              ],
+              "status": "flaky"
+            }
+          ]
         }
       ],
       "suites": [
