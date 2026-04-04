@@ -4,13 +4,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['**/*.{test,spec}.{js,jsx}'],
+    include: ['**/*.{test,spec}.{js,jsx,ts,tsx}'],
     exclude: [
       'node_modules/**',
       'dist/**',
       'build/**',
       '.next/**',
-      'apps/docs/**' // Exclude docs app tests (has its own config)
+      'apps/docs/**', // Exclude docs app tests (has its own config)
     ],
     coverage: {
       provider: 'v8',
@@ -21,8 +21,8 @@ export default defineConfig({
         'build/**',
         'coverage/**',
         '**/*.config.{js,ts}',
-        '**/*.d.ts'
-      ]
-    }
-  }
+        '**/*.d.ts',
+      ],
+    },
+  },
 })
