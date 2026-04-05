@@ -13,6 +13,8 @@ const IGNORED_DIRS = new Set([
   '.nuxt',
   'out',
   '.vite',
+  'allure-results',
+  'allure-report',
 ])
 
 export function walkFiles(dir: string, projectRoot: string): string[] {

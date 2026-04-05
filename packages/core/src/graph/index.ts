@@ -103,6 +103,8 @@ function resolveSpecifier(
   return null
 }
 
+const PARSEABLE_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx'])
+
 export function buildImportGraph(
   packageRoot: string,
   filePaths: string[],  // relative to projectRoot
@@ -111,6 +113,10 @@ export function buildImportGraph(
   const graph: ImportGraph = { imports: new Map(), importedBy: new Map() }
 
   for (const relPath of filePaths) {
+    const dotIdx = relPath.lastIndexOf('.')
+    const ext = dotIdx === -1 ? '' : relPath.slice(dotIdx)
+    if (!PARSEABLE_EXTS.has(ext)) continue
+
     if (!graph.imports.has(relPath)) {
       graph.imports.set(relPath, new Set())
     }
