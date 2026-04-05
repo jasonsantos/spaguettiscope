@@ -81,8 +81,7 @@ describe('runScan — monorepo with plugin', () => {
     rmSync(dir, { recursive: true, force: true })
   })
 
-  // TODO: Re-enable after Task 7 ships @spaguettiscope/plugin-nextjs
-  it.skip('applies plugin rules only to packages where canApply returns true', async () => {
+  it('applies plugin rules only to packages where canApply returns true', async () => {
     // Two packages: only "web" has next in package.json
     mkdirSync(join(dir, 'packages/web/app/api/checkout'), { recursive: true })
     mkdirSync(join(dir, 'packages/api'), { recursive: true })

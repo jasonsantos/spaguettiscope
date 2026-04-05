@@ -35,6 +35,7 @@
     "yaml": "^2.8.3"
   },
   "devDependencies": {
+    "@spaguettiscope/plugin-nextjs": "workspace:*",
     "@types/figlet": "latest",
     "@types/gradient-string": "latest",
     "@types/node": "latest",
