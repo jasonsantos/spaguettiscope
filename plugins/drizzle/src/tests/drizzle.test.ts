@@ -52,7 +52,14 @@ describe('drizzlePlugin.rules', () => {
     expect(ids).toContain('drizzle:schema')
     expect(ids).toContain('drizzle:migration-sql')
     expect(ids).toContain('drizzle:migration-ts')
+    expect(ids).toContain('drizzle:config')
+    expect(ids).toContain('drizzle:db-client')
+    expect(ids).toContain('drizzle:repository')
+    expect(ids).toContain('drizzle:seed')
+    expect(ids).toContain('drizzle:seed-dir')
   })
+
+  // ── Schema ──────────────────────────────────────────────────────────────────
 
   it('schema rule has content predicate matching pgTable(', () => {
     const rules = drizzlePlugin.rules()
@@ -80,6 +87,8 @@ describe('drizzlePlugin.rules', () => {
     expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
   })
 
+  // ── Migrations ───────────────────────────────────────────────────────────────
+
   it('migration-sql rule has correct path selector and yields role=migration, layer=data', () => {
     const rules = drizzlePlugin.rules()
     const rule = rules.find(r => r.id === 'drizzle:migration-sql')!
@@ -93,6 +102,96 @@ describe('drizzlePlugin.rules', () => {
     const rule = rules.find(r => r.id === 'drizzle:migration-ts')!
     expect(rule.selector.path).toBe('**/migrations/**/*.ts')
     expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'migration' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
+  })
+
+  // ── Config ───────────────────────────────────────────────────────────────────
+
+  it('config rule matches drizzle.config.ts path', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:config')!
+    expect(rule.selector.path).toMatch(/drizzle\.config/)
+  })
+
+  it('config rule content predicate matches defineConfig(', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:config')!
+    expect(rule.selector.content).toBeDefined()
+    expect(new RegExp(rule.selector.content!).test('defineConfig(')).toBe(true)
+  })
+
+  it('config rule yields role=drizzle-config and layer=data', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:config')!
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'drizzle-config' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
+  })
+
+  // ── DB client ─────────────────────────────────────────────────────────────────
+
+  it('db-client rule content predicate matches drizzle( call', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:db-client')!
+    expect(rule.selector.content).toBeDefined()
+    expect(new RegExp(rule.selector.content!).test('drizzle(')).toBe(true)
+  })
+
+  it('db-client rule yields role=db-client and layer=data', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:db-client')!
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'db-client' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
+  })
+
+  // ── Repository ────────────────────────────────────────────────────────────────
+
+  it('repository rule content predicate matches drizzle-orm import', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:repository')!
+    expect(rule.selector.content).toBeDefined()
+    expect(new RegExp(rule.selector.content!).test("from 'drizzle-orm'")).toBe(true)
+    expect(new RegExp(rule.selector.content!).test('from "drizzle-orm"')).toBe(true)
+  })
+
+  it('repository rule has graph predicate importing from schema', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:repository')!
+    expect(rule.selector.graph).toBeDefined()
+    expect(rule.selector.graph).toMatchObject({ kind: 'imports', glob: '**/schema/**' })
+  })
+
+  it('repository rule yields role=repository and layer=data', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:repository')!
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'repository' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
+  })
+
+  // ── Seeds ─────────────────────────────────────────────────────────────────────
+
+  it('seed rule matches **/seed.ts path', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:seed')!
+    expect(rule.selector.path).toBe('**/seed.ts')
+  })
+
+  it('seed rule yields role=seed and layer=data', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:seed')!
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'seed' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
+  })
+
+  it('seed-dir rule matches files inside a seeds/ directory', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:seed-dir')!
+    expect(rule.selector.path).toBe('**/seeds/**/*.{ts,js,cjs,mjs}')
+  })
+
+  it('seed-dir rule yields role=seed and layer=data', () => {
+    const rules = drizzlePlugin.rules()
+    const rule = rules.find(r => r.id === 'drizzle:seed-dir')!
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'seed' })
     expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
   })
 })
