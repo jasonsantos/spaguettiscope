@@ -51,6 +51,16 @@ export interface DashboardOptions {
   projectRoot?: string
 }
 
+function resolveRecordSourceFile(
+  record: NormalizedRunRecord,
+  projectRoot: string
+): string | null {
+  const labels = record.metadata?.labels as Array<{ name: string; value: string }> | undefined
+  const raw = labels?.find(l => l.name === 'testSourceFile')?.value ?? record.source.file
+  if (!raw) return null
+  return isAbsolute(raw) ? raw : join(projectRoot, raw)
+}
+
 export async function runDashboard(options: DashboardOptions): Promise<void> {
   const projectRoot = options.projectRoot ?? process.cwd()
 
@@ -86,17 +96,13 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
   // Apply skeleton to enrich record dimensions — skeleton takes precedence over inference
   const skeletonPath = resolve(projectRoot, config.skeleton)
   const skeletonSetKeys = new Map<NormalizedRunRecord, Set<string>>()
-  if (existsSync(skeletonPath)) {
-    const skeleton = readSkeleton(skeletonPath)
+  const skeleton = existsSync(skeletonPath) ? readSkeleton(skeletonPath) : null
+
+  if (skeleton) {
     for (const record of records) {
       // Prefer the testSourceFile label (allure, etc.) over the connector result file path
-      const labels = record.metadata?.labels as Array<{ name: string; value: string }> | undefined
-      const testSourceFile = labels?.find(l => l.name === 'testSourceFile')?.value
-      const rawFilePath = testSourceFile ?? record.source.file
-      if (!rawFilePath) continue
-      const absFilePath = isAbsolute(rawFilePath)
-        ? rawFilePath
-        : join(projectRoot, rawFilePath)
+      const absFilePath = resolveRecordSourceFile(record, projectRoot)
+      if (!absFilePath) continue
       try {
         const skeletonAttrs = matchFile(absFilePath, skeleton, projectRoot)
         Object.assign(record.dimensions, skeletonAttrs)
@@ -121,18 +127,12 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       const importGraph = mergeImportGraphs(graphs)
 
       // Only run if we have a skeleton to look up attributes from
-      if (existsSync(skeletonPath)) {
-        const skeleton = readSkeleton(skeletonPath)
-
+      if (skeleton) {
         for (const record of records) {
           if (record.dimensions.role !== 'test') continue
 
-          const labels = record.metadata?.labels as Array<{ name: string; value: string }> | undefined
-          const testSourceFile = labels?.find(l => l.name === 'testSourceFile')?.value
-          const rawFilePath = testSourceFile ?? record.source.file
-          if (!rawFilePath) continue
-
-          const absFilePath = isAbsolute(rawFilePath) ? rawFilePath : join(projectRoot, rawFilePath)
+          const absFilePath = resolveRecordSourceFile(record, projectRoot)
+          if (!absFilePath) continue
 
           let relFilePath: string
           try {
