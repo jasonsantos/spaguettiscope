@@ -30,6 +30,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
+    "@vitest/coverage-v8": "^4.1.2",
     "jsdom": "latest",
     "react": "latest",
     "react-dom": "latest",
