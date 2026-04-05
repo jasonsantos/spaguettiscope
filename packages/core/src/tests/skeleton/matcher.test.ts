@@ -46,4 +46,11 @@ describe('matchFile', () => {
       tag: 'utils',
     })
   })
+
+  it('throws when absoluteFilePath is not under projectRoot', () => {
+    const skeleton: SkeletonFile = { entries: [] }
+    expect(() => matchFile('/other/src/file.ts', skeleton, projectRoot)).toThrow(
+      'matchFile: absoluteFilePath must be under projectRoot'
+    )
+  })
 })

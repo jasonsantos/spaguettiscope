@@ -7,9 +7,14 @@ export function matchFile(
   skeleton: SkeletonFile,
   projectRoot: string
 ): Record<string, string> {
-  const relPath = absoluteFilePath.startsWith(projectRoot + '/')
-    ? absoluteFilePath.slice(projectRoot.length + 1)
-    : absoluteFilePath
+  if (!absoluteFilePath.startsWith(projectRoot + '/')) {
+    throw new Error(
+      `matchFile: absoluteFilePath must be under projectRoot.\n` +
+      `  projectRoot:       ${projectRoot}\n` +
+      `  absoluteFilePath:  ${absoluteFilePath}`
+    )
+  }
+  const relPath = absoluteFilePath.slice(projectRoot.length + 1)
 
   const result: Record<string, string> = {}
 
