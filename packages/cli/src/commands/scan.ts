@@ -53,7 +53,7 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
   // 4. Build per-package import graphs, merge
   const graphSpinner = ora('Building import graphs…').start()
 
-  // Bucket files by package in a single O(N+M) pass
+  // Bucket files by package — O(files × packages); packages count is typically small
   const filesByPackage = new Map<string, string[]>()
   for (const pkg of packages) {
     filesByPackage.set(pkg.rel, [])

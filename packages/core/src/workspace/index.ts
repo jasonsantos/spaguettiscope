@@ -24,7 +24,7 @@ function resolveGlob(pattern: string, projectRoot: string): string[] {
   const results: string[] = []
 
   function scan(absDir: string, relDir: string, depth: number) {
-    if (depth > 4) return
+    if (depth > 4) return // safety cap: workspace patterns rarely nest beyond 4 levels
     let entries: string[]
     try {
       entries = readdirSync(absDir)
