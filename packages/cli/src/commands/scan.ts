@@ -40,9 +40,11 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
     try {
       const mod = await import(pluginId) as Record<string, unknown>
       const plugin = (mod.default ?? Object.values(mod)[0]) as ScanPlugin
-      if (plugin && typeof plugin.canApply === 'function') {
-        plugins.push(plugin)
+      if (!plugin || typeof plugin.canApply !== 'function') {
+        console.warn(`[spasco] Plugin ${pluginId} did not export a valid ScanPlugin — skipping`)
+        continue
       }
+      plugins.push(plugin)
     } catch (err) {
       ora().warn(`Failed to load plugin ${pluginId}: ${(err as Error).message}`)
     }
@@ -50,12 +52,25 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
 
   // 4. Build per-package import graphs, merge
   const graphSpinner = ora('Building import graphs…').start()
-  const graphs = packages.map(pkg => {
-    const pkgFiles = pkg.rel === '.'
-      ? allFiles
-      : allFiles.filter(f => f.startsWith(pkg.rel + '/'))
-    return buildImportGraph(pkg.root, pkgFiles, projectRoot)
-  })
+
+  // Bucket files by package in a single O(N+M) pass
+  const filesByPackage = new Map<string, string[]>()
+  for (const pkg of packages) {
+    filesByPackage.set(pkg.rel, [])
+  }
+  for (const f of allFiles) {
+    // For single-package (rel='.'), all files belong to it
+    const matchingPkg = packages.find(pkg =>
+      pkg.rel === '.' || f.startsWith(pkg.rel + '/')
+    )
+    if (matchingPkg) {
+      filesByPackage.get(matchingPkg.rel)!.push(f)
+    }
+  }
+
+  const graphs = packages.map(pkg =>
+    buildImportGraph(pkg.root, filesByPackage.get(pkg.rel) ?? [], projectRoot)
+  )
   const importGraph = mergeImportGraphs(graphs)
   graphSpinner.succeed('Import graphs built')
 
@@ -67,7 +82,7 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
       for (const rule of plugin.rules()) {
         pluginRules.push({
           ...rule,
-          id: `${plugin.id}::${rule.id}`,
+          id: `${plugin.id}::${pkg.rel}::${rule.id}`,
           selector: {
             ...rule.selector,
             path: pkg.rel === '.' ? rule.selector.path : `${pkg.rel}/${rule.selector.path}`,
