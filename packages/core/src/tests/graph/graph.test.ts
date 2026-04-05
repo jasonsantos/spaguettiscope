@@ -92,6 +92,15 @@ describe('buildImportGraph', () => {
 
     expect(graph.imports.get('src/a.ts')!.size).toBe(0)
   })
+
+  it('captures dynamic import() calls', () => {
+    write('src/a.ts', "const mod = import('./b')")
+    write('src/b.ts', 'export const b = 2')
+
+    const graph = buildImportGraph(dir, ['src/a.ts', 'src/b.ts'], dir)
+
+    expect(graph.imports.get('src/a.ts')).toContain('src/b.ts')
+  })
 })
 
 describe('mergeImportGraphs', () => {
@@ -109,5 +118,21 @@ describe('mergeImportGraphs', () => {
 
     expect(merged.imports.get('a.ts')).toContain('b.ts')
     expect(merged.imports.get('c.ts')).toContain('d.ts')
+  })
+
+  it('unions Sets when both graphs share a key', () => {
+    const g1 = {
+      imports: new Map([['a.ts', new Set(['b.ts'])]]),
+      importedBy: new Map([['b.ts', new Set(['a.ts'])]]),
+    }
+    const g2 = {
+      imports: new Map([['a.ts', new Set(['c.ts'])]]),
+      importedBy: new Map([['c.ts', new Set(['a.ts'])]]),
+    }
+
+    const merged = mergeImportGraphs([g1, g2])
+
+    expect(merged.imports.get('a.ts')).toContain('b.ts')
+    expect(merged.imports.get('a.ts')).toContain('c.ts')
   })
 })

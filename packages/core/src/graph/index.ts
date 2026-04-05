@@ -41,6 +41,16 @@ function extractSpecifiers(code: string, isJsx: boolean): string[] {
     ) {
       specifiers.push((node.source as { value: string }).value)
     } else if (
+      node.type === 'ImportExpression' &&
+      (node.source as AstNode)?.type === 'Literal'
+    ) {
+      specifiers.push((node.source as { value: string }).value)
+    } else if (
+      node.type === 'TSImportType' &&
+      (node.argument as AstNode)?.type === 'Literal'
+    ) {
+      specifiers.push((node.argument as { value: string }).value)
+    } else if (
       node.type === 'CallExpression' &&
       (node.callee as AstNode)?.type === 'Identifier' &&
       (node.callee as { name: string }).name === 'require'
@@ -77,12 +87,13 @@ function resolveSpecifier(
 ): string | null {
   if (!specifier.startsWith('.') && !specifier.startsWith('/')) return null
 
+  const normPackageRoot = packageRoot.endsWith('/') ? packageRoot.slice(0, -1) : packageRoot
   const candidate = resolve(dirname(fromAbs), specifier)
 
   // No cross-package edges
-  if (!candidate.startsWith(packageRoot + '/') && candidate !== packageRoot) return null
+  if (!candidate.startsWith(normPackageRoot + '/') && candidate !== normPackageRoot) return null
 
-  const extensions = ['', '.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx']
+  const extensions = ['', '.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx', '/index.js', '/index.jsx']
   for (const ext of extensions) {
     const full = candidate + ext
     if (existsSync(full) && statSync(full).isFile()) {
