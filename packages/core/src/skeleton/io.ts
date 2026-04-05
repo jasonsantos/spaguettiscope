@@ -5,7 +5,12 @@ import type { SkeletonFile, SkeletonFileEntry } from './types.js'
 export function readSkeleton(filePath: string): SkeletonFile {
   if (!existsSync(filePath)) return { entries: [] }
   const raw = readFileSync(filePath, 'utf-8')
-  const parsed = parse(raw) as SkeletonFileEntry[] | null
+  let parsed: unknown
+  try {
+    parsed = parse(raw)
+  } catch (err) {
+    throw new Error(`Failed to parse skeleton file at ${filePath}: ${(err as Error).message}`)
+  }
   return { entries: Array.isArray(parsed) ? parsed : [] }
 }
 

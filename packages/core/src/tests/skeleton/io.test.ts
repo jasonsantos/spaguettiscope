@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdirSync, rmSync } from 'node:fs'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { readSkeleton, writeSkeleton } from '../../skeleton/io.js'
@@ -52,5 +52,11 @@ describe('skeleton IO', () => {
     writeSkeleton(path, skeleton)
     const read = readSkeleton(path)
     expect((read.entries[0] as any).stale).toBe(true)
+  })
+
+  it('throws a descriptive error for malformed YAML', () => {
+    const path = join(dir, 'bad.yaml')
+    writeFileSync(path, 'not: valid: yaml: content:\n  broken: [unclosed')
+    expect(() => readSkeleton(path)).toThrow(/Failed to parse skeleton file/)
   })
 })
