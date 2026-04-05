@@ -1,7 +1,7 @@
 import { writeFileSync, mkdirSync, cpSync, existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import ora from 'ora'
-import { loadConfig, InferenceEngine, defaultDefinitions } from '@spaguettiscope/core'
+import { loadConfig, InferenceEngine, defaultDefinitions, readSkeleton, matchFile } from '@spaguettiscope/core'
 import {
   AllureConnector,
   PlaywrightConnector,
@@ -70,6 +70,28 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       connectorSpinner.succeed(`Read ${connectorConfig.id} (${results.length} records)`)
     } catch (err) {
       connectorSpinner.fail(`Failed to read ${connectorConfig.id}: ${(err as Error).message}`)
+    }
+  }
+
+  // Apply skeleton to enrich record dimensions — skeleton takes precedence over inference
+  const skeletonPath = resolve(projectRoot, config.skeleton)
+  if (existsSync(skeletonPath)) {
+    const skeleton = readSkeleton(skeletonPath)
+    for (const record of records) {
+      // Prefer the testSourceFile label (allure, etc.) over the connector result file path
+      const labels = record.metadata?.labels as Array<{ name: string; value: string }> | undefined
+      const testSourceFile = labels?.find(l => l.name === 'testSourceFile')?.value
+      const rawFilePath = testSourceFile ?? record.source.file
+      if (!rawFilePath) continue
+      const absFilePath = rawFilePath.startsWith('/')
+        ? rawFilePath
+        : join(projectRoot, rawFilePath)
+      try {
+        const skeletonAttrs = matchFile(absFilePath, skeleton, projectRoot)
+        Object.assign(record.dimensions, skeletonAttrs)
+      } catch {
+        // File is outside projectRoot or other error — skip silently
+      }
     }
   }
 

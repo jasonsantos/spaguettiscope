@@ -63,6 +63,40 @@ describe('runDashboard', () => {
     expect(records[0].name).toBe('sample test')
   });
 
+  it('applies skeleton attributes to records', async () => {
+    const allureDir = join(tmpDir, 'allure-results')
+    mkdirSync(allureDir)
+    writeFileSync(
+      join(allureDir, 'test-001-result.json'),
+      JSON.stringify({
+        uuid: 'test-001',
+        name: 'checkout test',
+        fullName: 'src/checkout/checkout.test.ts#Suite checkout test',
+        status: 'passed',
+        start: Date.now() - 500,
+        stop: Date.now(),
+        labels: [{ name: 'testSourceFile', value: 'src/checkout/checkout.test.ts' }],
+      })
+    )
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ dashboard: { connectors: [{ id: 'allure', resultsDir: allureDir }] } })
+    )
+    // Write a skeleton that assigns domain=checkout to src/checkout/**
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.skeleton.yaml'),
+      `- attributes:\n    domain: checkout\n    layer: bff\n  paths:\n    - src/checkout/**\n`
+    )
+
+    const outputDir = join(tmpDir, 'reports')
+    await runDashboard({ ci: false, output: outputDir, projectRoot: tmpDir })
+
+    const records = JSON.parse(readFileSync(join(outputDir, 'data', 'records.json'), 'utf-8'))
+    const record = records[0]
+    expect(record.dimensions.domain).toBe('checkout')
+    expect(record.dimensions.layer).toBe('bff')
+  });
+
   it('writes history file and reads it back on second run', async () => {
     const allureDir = join(tmpDir, 'allure-results')
     mkdirSync(allureDir)
