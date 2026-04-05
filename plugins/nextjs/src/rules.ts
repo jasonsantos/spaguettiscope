@@ -39,4 +39,15 @@ export const nextjsRules: Rule[] = [
     selector: { path: 'middleware.ts' },
     yields: [{ kind: 'concrete', key: 'role', value: 'middleware' }],
   },
+  {
+    id: 'nextjs:server-action',
+    selector: {
+      path: '**/*.ts',
+      content: "^'use server'",
+    },
+    yields: [
+      { kind: 'concrete', key: 'role', value: 'server-action' },
+      { kind: 'concrete', key: 'layer', value: 'bff' },
+    ],
+  },
 ]

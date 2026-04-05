@@ -46,4 +46,9 @@ export const builtInRoleRules: Rule[] = [
     selector: { path: '**/*.spec.tsx' },
     yields: [{ kind: 'concrete', key: 'role', value: 'test' }],
   },
+  {
+    id: 'built-in:role:bdd-spec',
+    selector: { path: '**/*.feature' },
+    yields: [{ kind: 'concrete', key: 'role', value: 'bdd-spec' }],
+  },
 ]

@@ -49,4 +49,9 @@ describe('builtInRoleRules', () => {
     const r = runRules(['e2e/flows/checkout.ts'], builtInRoleRules, projectRoot)
     expect(r.some(c => c.attributes.role === 'e2e')).toBe(true)
   })
+
+  it('assigns role=bdd-spec to *.feature files', () => {
+    const r = runRules(['some/path/file.feature'], builtInRoleRules, projectRoot)
+    expect(r.some(c => c.attributes.role === 'bdd-spec')).toBe(true)
+  })
 })

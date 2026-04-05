@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { nextjsPlugin } from '../index.js'
+import { runRules } from '@spaguettiscope/core'
 
 describe('nextjsPlugin.canApply', () => {
   let dir: string
@@ -78,5 +79,52 @@ describe('nextjsPlugin.rules', () => {
     const rule = rules.find(r => r.id === 'nextjs:client-component')!
     expect(rule.selector.content).toBeDefined()
     expect(new RegExp(rule.selector.content!).test('"use client"')).toBe(true)
+  })
+
+  it('server-action rule is present with expected id', () => {
+    const rules = nextjsPlugin.rules()
+    const ids = rules.map(r => r.id)
+    expect(ids).toContain('nextjs:server-action')
+  })
+
+  it('server-action rule yields role=server-action and layer=bff', () => {
+    const rules = nextjsPlugin.rules()
+    const rule = rules.find(r => r.id === 'nextjs:server-action')!
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'server-action' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'bff' })
+  })
+})
+
+describe('nextjsPlugin server-action rule — content matching', () => {
+  let dir: string
+
+  beforeEach(() => {
+    dir = join(tmpdir(), `spasco-nextjs-sa-${Date.now()}`)
+    mkdirSync(dir, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('assigns role=server-action and layer=bff to a .ts file starting with \'use server\'', () => {
+    writeFileSync(
+      join(dir, 'actions.ts'),
+      "'use server'\nexport async function createUser() {}"
+    )
+    const rules = nextjsPlugin.rules()
+    const r = runRules(['actions.ts'], rules, dir)
+    expect(r.some(c => c.attributes.role === 'server-action')).toBe(true)
+    expect(r.some(c => c.attributes.layer === 'bff')).toBe(true)
+  })
+
+  it('does NOT assign server-action to a .ts file without \'use server\' at the top', () => {
+    writeFileSync(
+      join(dir, 'service.ts'),
+      "export async function createUser() {}"
+    )
+    const rules = nextjsPlugin.rules()
+    const r = runRules(['service.ts'], rules, dir)
+    expect(r.some(c => c.attributes.role === 'server-action')).toBe(false)
   })
 })
