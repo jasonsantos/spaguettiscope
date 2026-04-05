@@ -6,6 +6,7 @@ interface CompiledRule {
   rule: Rule
   regex: RegExp
   captureCount: number
+  contentRegex: RegExp | undefined
 }
 
 function compileRule(rule: Rule): CompiledRule {
@@ -29,12 +30,17 @@ function compileRule(rule: Rule): CompiledRule {
     // Replace single * (one segment, no slashes)
     .replace(/\*/g, '[^/]*')
 
-  return { rule, regex: new RegExp(`^${regexStr}$`), captureCount }
+  return {
+    rule,
+    regex: new RegExp(`^${regexStr}$`),
+    captureCount,
+    contentRegex: rule.selector.content ? new RegExp(rule.selector.content) : undefined,
+  }
 }
 
 function resolveYields(
   yields: RuleYield[],
-  captures: string[]
+  captures: (string | undefined)[]
 ): { attributes: Record<string, string>; isUncertain: boolean } {
   const attributes: Record<string, string> = {}
   let isUncertain = false
@@ -51,7 +57,7 @@ function resolveYields(
   return { attributes, isUncertain }
 }
 
-function deriveCandidatePath(pattern: string, captures: string[]): string {
+function deriveCandidatePath(pattern: string, captures: (string | undefined)[]): string {
   if (captures.length === 0) return pattern
   let i = 0
   const withCaptures = pattern.replace(/\(\$\d+\)/g, () => captures[i++] ?? '')
@@ -72,21 +78,21 @@ export function runRules(
   const grouped = new Map<string, RuleCandidate>()
 
   for (const filePath of relativeFilePaths) {
-    for (const { rule, regex, captureCount } of compiled) {
+    for (const { rule, regex, captureCount, contentRegex } of compiled) {
       const match = filePath.match(regex)
       if (!match) continue
 
-      if (rule.selector.content) {
+      if (contentRegex) {
         try {
           const abs = join(projectRoot, filePath)
           const content = readFileSync(abs, { encoding: 'utf-8' })
-          if (!new RegExp(rule.selector.content).test(content.slice(0, 200))) continue
+          if (!contentRegex.test(content.slice(0, 200))) continue
         } catch {
           continue
         }
       }
 
-      const captures = match.slice(1, captureCount + 1) as string[]
+      const captures = match.slice(1, captureCount + 1) as (string | undefined)[]
       const { attributes, isUncertain } = resolveYields(rule.yields, captures)
       const pathPattern = deriveCandidatePath(rule.selector.path, captures)
       const groupKey = `${rule.id}::${pathPattern}`
