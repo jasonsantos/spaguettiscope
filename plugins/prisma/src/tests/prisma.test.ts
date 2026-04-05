@@ -64,7 +64,12 @@ describe('prismaPlugin.rules', () => {
     expect(ids).toContain('prisma:schema')
     expect(ids).toContain('prisma:migration')
     expect(ids).toContain('prisma:seed')
+    expect(ids).toContain('prisma:db-client')
+    expect(ids).toContain('prisma:db-middleware')
+    expect(ids).toContain('prisma:repository')
   })
+
+  // ── Schema ──────────────────────────────────────────────────────────────────
 
   it('schema rule has correct path selector and yields role=schema, layer=data', () => {
     const rules = prismaPlugin.rules()
@@ -74,6 +79,8 @@ describe('prismaPlugin.rules', () => {
     expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
   })
 
+  // ── Migration ────────────────────────────────────────────────────────────────
+
   it('migration rule has correct path selector and yields role=migration, layer=data', () => {
     const rules = prismaPlugin.rules()
     const rule = rules.find(r => r.id === 'prisma:migration')!
@@ -81,6 +88,101 @@ describe('prismaPlugin.rules', () => {
     expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'migration' })
     expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
   })
+
+  // ── DB client ─────────────────────────────────────────────────────────────────
+
+  it('db-client rule has a content predicate', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:db-client')!
+    expect(rule.selector.content).toBeDefined()
+  })
+
+  it('db-client rule content predicate matches PrismaClient import', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:db-client')!
+    expect(new RegExp(rule.selector.content!).test("import { PrismaClient } from '@prisma/client'")).toBe(true)
+  })
+
+  it('db-client rule content predicate matches PrismaClient in globalThis singleton pattern', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:db-client')!
+    expect(new RegExp(rule.selector.content!).test('const globalForPrisma = global as unknown as { prisma: PrismaClient }')).toBe(true)
+  })
+
+  it('db-client rule yields role=db-client and layer=data', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:db-client')!
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'db-client' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
+  })
+
+  // ── DB middleware ─────────────────────────────────────────────────────────────
+
+  it('db-middleware rule has a content predicate', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:db-middleware')!
+    expect(rule.selector.content).toBeDefined()
+  })
+
+  it('db-middleware rule content predicate matches $extends( call', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:db-middleware')!
+    expect(new RegExp(rule.selector.content!).test('prisma.$extends({')).toBe(true)
+  })
+
+  it('db-middleware rule content predicate matches $use( call', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:db-middleware')!
+    expect(new RegExp(rule.selector.content!).test('prisma.$use(async (params, next) => {')).toBe(true)
+  })
+
+  it('db-middleware rule content predicate does not match unrelated content', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:db-middleware')!
+    expect(new RegExp(rule.selector.content!).test("import { PrismaClient } from '@prisma/client'")).toBe(false)
+  })
+
+  it('db-middleware rule yields role=db-middleware and layer=data', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:db-middleware')!
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'db-middleware' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
+  })
+
+  // ── Repository ────────────────────────────────────────────────────────────────
+
+  it('repository rule has a content predicate', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:repository')!
+    expect(rule.selector.content).toBeDefined()
+  })
+
+  it('repository rule content predicate matches single-quote @prisma/client import', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:repository')!
+    expect(new RegExp(rule.selector.content!).test("import { User, Post } from '@prisma/client'")).toBe(true)
+  })
+
+  it('repository rule content predicate matches double-quote @prisma/client import', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:repository')!
+    expect(new RegExp(rule.selector.content!).test('import { User } from "@prisma/client"')).toBe(true)
+  })
+
+  it('repository rule content predicate does not match unrelated import', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:repository')!
+    expect(new RegExp(rule.selector.content!).test("import { something } from './utils'")).toBe(false)
+  })
+
+  it('repository rule yields role=repository and layer=data', () => {
+    const rules = prismaPlugin.rules()
+    const rule = rules.find(r => r.id === 'prisma:repository')!
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'repository' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'data' })
+  })
+
+  // ── Seed ─────────────────────────────────────────────────────────────────────
 
   it('seed rule has correct path selector and yields role=seed, layer=data', () => {
     const rules = prismaPlugin.rules()
