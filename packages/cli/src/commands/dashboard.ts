@@ -1,5 +1,5 @@
 import { writeFileSync, mkdirSync, cpSync, existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join, resolve, isAbsolute } from 'node:path'
 import ora from 'ora'
 import { loadConfig, InferenceEngine, defaultDefinitions, readSkeleton, matchFile } from '@spaguettiscope/core'
 import {
@@ -83,7 +83,7 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       const testSourceFile = labels?.find(l => l.name === 'testSourceFile')?.value
       const rawFilePath = testSourceFile ?? record.source.file
       if (!rawFilePath) continue
-      const absFilePath = rawFilePath.startsWith('/')
+      const absFilePath = isAbsolute(rawFilePath)
         ? rawFilePath
         : join(projectRoot, rawFilePath)
       try {

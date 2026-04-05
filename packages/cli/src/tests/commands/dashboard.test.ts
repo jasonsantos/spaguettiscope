@@ -126,4 +126,28 @@ describe('runDashboard', () => {
     const lines = readFileSync(historyPath, 'utf-8').trim().split('\n')
     expect(lines).toHaveLength(2)
   })
+
+  it('runs without error when skeleton file does not exist', async () => {
+    const allureDir = join(tmpDir, 'allure-results')
+    mkdirSync(allureDir)
+    writeFileSync(
+      join(allureDir, 'test-001-result.json'),
+      JSON.stringify({
+        uuid: 'test-001',
+        name: 'test',
+        fullName: 'src/test.ts#test',
+        status: 'passed',
+        start: Date.now() - 100,
+        stop: Date.now(),
+      })
+    )
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ dashboard: { connectors: [{ id: 'allure', resultsDir: allureDir }] } })
+    )
+    // No skeleton file written — should not crash
+
+    const outputDir = join(tmpDir, 'reports')
+    await expect(runDashboard({ ci: false, output: outputDir, projectRoot: tmpDir })).resolves.not.toThrow()
+  })
 });
