@@ -143,3 +143,143 @@ describe('reactRules — context detection', () => {
     expect(candidate).toBeUndefined()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Provider rules
+// ---------------------------------------------------------------------------
+
+describe('reactRules — provider detection', () => {
+  let projectRoot: string
+
+  beforeEach(() => {
+    projectRoot = join(tmpdir(), `spasco-react-provider-${Date.now()}`)
+    mkdirSync(projectRoot, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(projectRoot, { recursive: true, force: true })
+  })
+
+  it('matches a *Provider.tsx file', () => {
+    const result = runRules(['src/providers/QueryProvider.tsx'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:provider')
+    expect(candidate).toBeDefined()
+    expect(candidate!.attributes.role).toBe('provider')
+    expect(candidate!.attributes.layer).toBe('ui')
+  })
+
+  it('matches a provider in a nested directory', () => {
+    const result = runRules(['components/pwa/PWAProvider.tsx'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:provider')
+    expect(candidate).toBeDefined()
+    expect(candidate!.attributes.role).toBe('provider')
+  })
+
+  it('does not match a .tsx file not ending with Provider', () => {
+    const result = runRules(['components/Button.tsx'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:provider')
+    expect(candidate).toBeUndefined()
+  })
+
+  it('does not match a Provider.ts file (wrong extension)', () => {
+    const result = runRules(['src/QueryProvider.ts'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:provider')
+    expect(candidate).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// HOC rules
+// ---------------------------------------------------------------------------
+
+describe('reactRules — HOC detection', () => {
+  let projectRoot: string
+
+  beforeEach(() => {
+    projectRoot = join(tmpdir(), `spasco-react-hoc-${Date.now()}`)
+    mkdirSync(projectRoot, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(projectRoot, { recursive: true, force: true })
+  })
+
+  it('matches a with[A-Z]*.ts HOC file', () => {
+    const result = runRules(['src/hocs/withAuth.ts'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:hoc')
+    expect(candidate).toBeDefined()
+    expect(candidate!.attributes.role).toBe('hoc')
+  })
+
+  it('matches a with[A-Z]*.tsx HOC file', () => {
+    const result = runRules(['src/hocs/withTheme.tsx'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:hoc-tsx')
+    expect(candidate).toBeDefined()
+    expect(candidate!.attributes.role).toBe('hoc')
+  })
+
+  it('matches a HOC in a nested directory', () => {
+    const result = runRules(['lib/auth/withPermissions.tsx'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:hoc-tsx')
+    expect(candidate).toBeDefined()
+  })
+
+  it('does not match a file starting with with but followed by lowercase', () => {
+    const result = runRules(['src/withoutSomething.ts'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:hoc')
+    expect(candidate).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Error boundary rules
+// ---------------------------------------------------------------------------
+
+describe('reactRules — error boundary detection', () => {
+  let projectRoot: string
+
+  beforeEach(() => {
+    projectRoot = join(tmpdir(), `spasco-react-eb-${Date.now()}`)
+    mkdirSync(projectRoot, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(projectRoot, { recursive: true, force: true })
+  })
+
+  it('matches a .tsx file containing componentDidCatch(', () => {
+    writeFileSync(
+      join(projectRoot, 'ErrorBoundary.tsx'),
+      `import { Component, ReactNode } from 'react'
+class ErrorBoundary extends Component {
+  componentDidCatch(error: Error) { console.error(error) }
+  render() { return this.props.children }
+}`
+    )
+    const result = runRules(['ErrorBoundary.tsx'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:error-boundary-tsx')
+    expect(candidate).toBeDefined()
+    expect(candidate!.attributes.role).toBe('error-boundary')
+  })
+
+  it('matches a .ts file containing componentDidCatch(', () => {
+    writeFileSync(
+      join(projectRoot, 'ErrorHandler.ts'),
+      `class ErrorHandler { componentDidCatch(error: Error) {} }`
+    )
+    const result = runRules(['ErrorHandler.ts'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:error-boundary-ts')
+    expect(candidate).toBeDefined()
+    expect(candidate!.attributes.role).toBe('error-boundary')
+  })
+
+  it('does not match a .tsx file without componentDidCatch(', () => {
+    writeFileSync(
+      join(projectRoot, 'RegularComponent.tsx'),
+      `export function RegularComponent() { return null }`
+    )
+    const result = runRules(['RegularComponent.tsx'], reactRules, projectRoot)
+    const candidate = result.find(c => c.source === 'react:error-boundary-tsx')
+    expect(candidate).toBeUndefined()
+  })
+})
