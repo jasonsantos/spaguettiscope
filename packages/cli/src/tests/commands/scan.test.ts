@@ -68,3 +68,56 @@ describe('runScan', () => {
     expect(oldEntry?.stale).toBe(true)
   })
 })
+
+describe('runScan — monorepo with plugin', () => {
+  let dir: string
+
+  beforeEach(() => {
+    dir = join(tmpdir(), `spasco-scan-monorepo-${Date.now()}`)
+    mkdirSync(dir, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('applies plugin rules only to packages where canApply returns true', async () => {
+    // Two packages: only "web" has next in package.json
+    mkdirSync(join(dir, 'packages/web/app/api/checkout'), { recursive: true })
+    mkdirSync(join(dir, 'packages/api'), { recursive: true })
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'monorepo' }))
+    writeFileSync(join(dir, 'pnpm-workspace.yaml'), 'packages:\n  - "packages/*"\n')
+    writeFileSync(
+      join(dir, 'packages/web/package.json'),
+      JSON.stringify({ name: '@acme/web', dependencies: { next: '14.0.0' } })
+    )
+    writeFileSync(
+      join(dir, 'packages/api/package.json'),
+      JSON.stringify({ name: '@acme/api' })
+    )
+    writeFileSync(
+      join(dir, 'packages/web/app/api/checkout/route.ts'),
+      'export async function GET() {}'
+    )
+    writeFileSync(
+      join(dir, 'spaguettiscope.config.json'),
+      JSON.stringify({
+        name: 'test',
+        plugins: ['@spaguettiscope/plugin-nextjs'],
+        dashboard: { connectors: [] },
+      })
+    )
+
+    await runScan({ projectRoot: dir })
+
+    const skeletonPath = join(dir, 'spaguettiscope.skeleton.yaml')
+    const entries = parse(readFileSync(skeletonPath, 'utf-8')) as Array<{
+      attributes: Record<string, string>
+      paths: string[]
+    }>
+    const apiEntry = entries.find(e => e.attributes?.role === 'api-endpoint')
+    expect(apiEntry).toBeDefined()
+    // Path should be scoped to packages/web
+    expect(apiEntry!.paths[0]).toMatch(/^packages\/web\//)
+  })
+})

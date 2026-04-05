@@ -1,5 +1,4 @@
-import { readdirSync, statSync } from 'node:fs'
-import { join, relative, resolve } from 'node:path'
+import { resolve } from 'node:path'
 import ora from 'ora'
 import {
   loadConfig,
@@ -8,49 +7,14 @@ import {
   mergeSkeleton,
   runRules,
   builtInRoleRules,
+  discoverWorkspaces,
+  buildImportGraph,
+  mergeImportGraphs,
+  type ScanPlugin,
+  type Rule,
 } from '@spaguettiscope/core'
+import { walkFiles } from '../utils/files.js'
 import { printSuccess } from '../formatter/index.js'
-
-const IGNORED_DIRS = new Set([
-  'node_modules',
-  '.git',
-  'dist',
-  'build',
-  '.turbo',
-  '.cache',
-  'coverage',
-  '.next',
-  '.nuxt',
-  'out',
-  '.vite',
-])
-
-function walkFiles(dir: string, projectRoot: string): string[] {
-  const results: string[] = []
-  let entries: string[]
-  try {
-    entries = readdirSync(dir)
-  } catch {
-    return results
-  }
-
-  for (const entry of entries) {
-    if (IGNORED_DIRS.has(entry)) continue
-    const abs = join(dir, entry)
-    let stat
-    try {
-      stat = statSync(abs)
-    } catch {
-      continue
-    }
-    if (stat.isDirectory()) {
-      results.push(...walkFiles(abs, projectRoot))
-    } else {
-      results.push(relative(projectRoot, abs))
-    }
-  }
-  return results
-}
 
 export interface ScanOptions {
   projectRoot?: string
@@ -62,14 +26,67 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
   const skeletonPath = resolve(projectRoot, config.skeleton)
   const disabledRuleIds = new Set(config.rules.disable)
 
+  // 1. Discover workspace packages
+  const packages = discoverWorkspaces(projectRoot)
+
+  // 2. Walk all files
   const fileSpinner = ora('Scanning files…').start()
   const allFiles = walkFiles(projectRoot, projectRoot)
   fileSpinner.succeed(`Found ${allFiles.length} files`)
 
+  // 3. Load plugins from config
+  const plugins: ScanPlugin[] = []
+  for (const pluginId of config.plugins) {
+    try {
+      const mod = await import(pluginId) as Record<string, unknown>
+      const plugin = (mod.default ?? Object.values(mod)[0]) as ScanPlugin
+      if (plugin && typeof plugin.canApply === 'function') {
+        plugins.push(plugin)
+      }
+    } catch (err) {
+      ora().warn(`Failed to load plugin ${pluginId}: ${(err as Error).message}`)
+    }
+  }
+
+  // 4. Build per-package import graphs, merge
+  const graphSpinner = ora('Building import graphs…').start()
+  const graphs = packages.map(pkg => {
+    const pkgFiles = pkg.rel === '.'
+      ? allFiles
+      : allFiles.filter(f => f.startsWith(pkg.rel + '/'))
+    return buildImportGraph(pkg.root, pkgFiles, projectRoot)
+  })
+  const importGraph = mergeImportGraphs(graphs)
+  graphSpinner.succeed('Import graphs built')
+
+  // 5. Scope plugin rules to their detected packages
+  const pluginRules: Rule[] = []
+  for (const pkg of packages) {
+    for (const plugin of plugins) {
+      if (!plugin.canApply(pkg.root)) continue
+      for (const rule of plugin.rules()) {
+        pluginRules.push({
+          ...rule,
+          id: `${plugin.id}::${rule.id}`,
+          selector: {
+            ...rule.selector,
+            path: pkg.rel === '.' ? rule.selector.path : `${pkg.rel}/${rule.selector.path}`,
+          },
+        })
+      }
+    }
+  }
+
+  // 6. Run rules (built-ins fire on all files; plugin rules are already scoped)
   const ruleSpinner = ora('Running rules…').start()
-  const candidates = runRules(allFiles, builtInRoleRules, projectRoot, { disabledRuleIds })
+  const allRules = [...builtInRoleRules, ...pluginRules]
+  const candidates = runRules(allFiles, allRules, projectRoot, {
+    disabledRuleIds,
+    importGraph,
+  })
   ruleSpinner.succeed(`Rules produced ${candidates.length} candidates`)
 
+  // 7. Merge skeleton
   const mergeSpinner = ora('Merging skeleton…').start()
   const existing = readSkeleton(skeletonPath)
   const { skeleton, added, unchanged, markedStale } = mergeSkeleton(
