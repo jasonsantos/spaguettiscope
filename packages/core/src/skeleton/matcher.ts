@@ -1,6 +1,6 @@
 import { minimatch } from 'minimatch'
 import type { SkeletonFile } from './types.js'
-import { isDraft } from './types.js'
+import { isDraft, isStale } from './types.js'
 
 export function matchFile(
   absoluteFilePath: string,
@@ -19,7 +19,7 @@ export function matchFile(
   const result: Record<string, string> = {}
 
   for (const entry of skeleton.entries) {
-    if (isDraft(entry)) continue
+    if (isDraft(entry) || isStale(entry)) continue
     const matches = entry.paths.some(p => minimatch(relPath, p, { dot: true }))
     if (matches) {
       Object.assign(result, entry.attributes)

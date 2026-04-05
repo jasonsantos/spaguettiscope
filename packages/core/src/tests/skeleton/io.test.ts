@@ -54,6 +54,16 @@ describe('skeleton IO', () => {
     expect((read.entries[0] as any).stale).toBe(true)
   })
 
+  it('filters out entries missing attributes or paths', () => {
+    const path = join(dir, 'skeleton.yaml')
+    const raw = `- attributes:\n    domain: checkout\n  paths:\n    - src/checkout/**\n- notAnEntry: true\n- attributes:\n    domain: auth\n`
+    writeFileSync(path, raw)
+    const read = readSkeleton(path)
+    // Only the first entry is valid (has both attributes and paths)
+    expect(read.entries).toHaveLength(1)
+    expect(read.entries[0].attributes.domain).toBe('checkout')
+  })
+
   it('throws a descriptive error for malformed YAML', () => {
     const path = join(dir, 'bad.yaml')
     writeFileSync(path, 'not: valid: yaml: content:\n  broken: [unclosed')

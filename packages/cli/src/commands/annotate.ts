@@ -35,6 +35,9 @@ export interface ResolveOptions {
 }
 
 export async function runAnnotateResolve(options: ResolveOptions): Promise<void> {
+  if (!options.as) {
+    throw new Error('--as <dimension> is required for annotate resolve (e.g. --as domain)')
+  }
   const projectRoot = options.projectRoot ?? process.cwd()
   const config = await loadConfig(projectRoot)
   const skeletonPath = resolve(projectRoot, config.skeleton)

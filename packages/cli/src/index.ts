@@ -55,7 +55,7 @@ annotate
     'Resolve ? entries. [values] is comma-separated captured values, or use --all to resolve all'
   )
   .option('--all', 'Resolve all pending ? entries', false)
-  .option('--as <dimension>', 'Dimension name to assign (e.g. domain)')
+  .requiredOption('--as <dimension>', 'Dimension name to assign (e.g. domain)')
   .option(
     '--add <attrs>',
     'Extra key=value pairs to add (comma-separated, e.g. layer=service,tag=tentative)'

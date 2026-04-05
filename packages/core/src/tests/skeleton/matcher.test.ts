@@ -47,6 +47,13 @@ describe('matchFile', () => {
     })
   })
 
+  it('skips stale entries', () => {
+    const skeleton: SkeletonFile = {
+      entries: [{ attributes: { domain: 'old' }, paths: ['src/old/**'], stale: true }],
+    }
+    expect(matchFile('/project/src/old/service.ts', skeleton, projectRoot)).toEqual({})
+  })
+
   it('throws when absoluteFilePath is not under projectRoot', () => {
     const skeleton: SkeletonFile = { entries: [] }
     expect(() => matchFile('/other/src/file.ts', skeleton, projectRoot)).toThrow(
