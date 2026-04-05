@@ -26,17 +26,18 @@
   "dependencies": {
     "@spaguettiscope/core": "workspace:*",
     "@spaguettiscope/reports": "workspace:*",
-    "commander": "latest",
+    "boxen": "latest",
     "chalk": "latest",
-    "ora": "latest",
+    "commander": "latest",
     "figlet": "latest",
     "gradient-string": "latest",
-    "boxen": "latest"
+    "ora": "latest",
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
-    "@types/node": "latest",
     "@types/figlet": "latest",
     "@types/gradient-string": "latest",
+    "@types/node": "latest",
     "typescript": "latest",
     "vitest": "latest"
   }

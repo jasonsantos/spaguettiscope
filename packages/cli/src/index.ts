@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { runDashboard } from './commands/dashboard.js';
+import { runScan } from './commands/scan.js';
 
 const program = new Command();
 
@@ -18,6 +19,18 @@ program
   .action(async (options) => {
     try {
       await runDashboard(options);
+    } catch (err) {
+      console.error((err as Error).message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('scan')
+  .description('Scan project files with rules and merge results into skeleton')
+  .action(async () => {
+    try {
+      await runScan();
     } catch (err) {
       console.error((err as Error).message);
       process.exit(1);
