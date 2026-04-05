@@ -32,6 +32,7 @@ export const SpascoConfigSchema = z.object({
       disable: z.array(z.string()).default([]),
     })
     .default({ disable: [] }),
+  plugins: z.array(z.string()).default([]),
   dashboard: z.object({
     connectors: z.array(ConnectorConfigSchema).default([]),
     outputDir: z.string().default('./reports'),

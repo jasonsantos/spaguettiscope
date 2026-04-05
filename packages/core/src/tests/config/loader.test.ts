@@ -80,4 +80,22 @@ describe('loadConfig', () => {
     const config = await loadConfig(tmpDir)
     expect(config.rules.disable).toEqual(['built-in:role:test-ts'])
   })
+
+  it('defaults plugins to empty array', async () => {
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.plugins).toEqual([])
+  })
+
+  it('accepts plugins array', async () => {
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ plugins: ['@acme/plugin-foo'], dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.plugins).toEqual(['@acme/plugin-foo'])
+  })
 });
