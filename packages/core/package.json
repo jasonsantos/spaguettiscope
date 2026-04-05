@@ -22,6 +22,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@typescript-eslint/parser": "^8.58.0",
     "minimatch": "^10.2.5",
     "yaml": "^2.8.3",
     "zod": "^4.3.6"
