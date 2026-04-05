@@ -54,14 +54,24 @@ describe('storybookPlugin.canApply', () => {
 })
 
 describe('storybookPlugin.rules', () => {
-  it('returns rules array with expected ids', () => {
+  it('returns rules array with all expected ids', () => {
     const rules = storybookPlugin.rules()
     const ids = rules.map(r => r.id)
     expect(ids).toContain('storybook:story-tsx')
     expect(ids).toContain('storybook:story-ts')
+    expect(ids).toContain('storybook:story-jsx')
+    expect(ids).toContain('storybook:story-js')
+    expect(ids).toContain('storybook:story-singular-tsx')
+    expect(ids).toContain('storybook:story-singular-ts')
+    expect(ids).toContain('storybook:mdx-doc')
+    expect(ids).toContain('storybook:main-config')
+    expect(ids).toContain('storybook:preview-config')
+    expect(ids).toContain('storybook:manager-config')
     expect(ids).toContain('storybook:config')
+    expect(ids).toContain('storybook:chromatic-config-file')
   })
 
+  // Plural story file rules
   it('story-tsx rule yields role=story and layer=documentation', () => {
     const rules = storybookPlugin.rules()
     const rule = rules.find(r => r.id === 'storybook:story-tsx')!
@@ -78,10 +88,83 @@ describe('storybookPlugin.rules', () => {
     expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'documentation' })
   })
 
-  it('config rule has correct path selector and yields role=storybook-config', () => {
+  it('story-jsx rule yields role=story and layer=documentation', () => {
+    const rules = storybookPlugin.rules()
+    const rule = rules.find(r => r.id === 'storybook:story-jsx')!
+    expect(rule.selector.path).toBe('**/*.stories.jsx')
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'story' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'documentation' })
+  })
+
+  it('story-js rule yields role=story and layer=documentation', () => {
+    const rules = storybookPlugin.rules()
+    const rule = rules.find(r => r.id === 'storybook:story-js')!
+    expect(rule.selector.path).toBe('**/*.stories.js')
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'story' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'documentation' })
+  })
+
+  // Singular story file rules
+  it('story-singular-tsx rule yields role=story and layer=documentation', () => {
+    const rules = storybookPlugin.rules()
+    const rule = rules.find(r => r.id === 'storybook:story-singular-tsx')!
+    expect(rule.selector.path).toBe('**/*.story.tsx')
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'story' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'documentation' })
+  })
+
+  it('story-singular-ts rule yields role=story and layer=documentation', () => {
+    const rules = storybookPlugin.rules()
+    const rule = rules.find(r => r.id === 'storybook:story-singular-ts')!
+    expect(rule.selector.path).toBe('**/*.story.ts')
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'story' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'documentation' })
+  })
+
+  // MDX documentation pages
+  it('mdx-doc rule matches *.mdx files containing @storybook import', () => {
+    const rules = storybookPlugin.rules()
+    const rule = rules.find(r => r.id === 'storybook:mdx-doc')!
+    expect(rule.selector.path).toBe('**/*.mdx')
+    expect(rule.selector.content).toBe('@storybook')
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'story' })
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'layer', value: 'documentation' })
+  })
+
+  // .storybook config file rules
+  it('main-config rule yields role=storybook-main for .storybook/main.ts', () => {
+    const rules = storybookPlugin.rules()
+    const rule = rules.find(r => r.id === 'storybook:main-config')!
+    expect(rule.selector.path).toBe('.storybook/main.{ts,js,mts,mjs,cts,cjs}')
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'storybook-main' })
+  })
+
+  it('preview-config rule yields role=storybook-preview for .storybook/preview.tsx', () => {
+    const rules = storybookPlugin.rules()
+    const rule = rules.find(r => r.id === 'storybook:preview-config')!
+    expect(rule.selector.path).toBe('.storybook/preview.{ts,tsx,js,jsx,mts,mjs}')
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'storybook-preview' })
+  })
+
+  it('manager-config rule yields role=storybook-manager for .storybook/manager.ts', () => {
+    const rules = storybookPlugin.rules()
+    const rule = rules.find(r => r.id === 'storybook:manager-config')!
+    expect(rule.selector.path).toBe('.storybook/manager.{ts,js,mts,mjs}')
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'storybook-manager' })
+  })
+
+  it('catch-all config rule covers remaining .storybook/** files', () => {
     const rules = storybookPlugin.rules()
     const rule = rules.find(r => r.id === 'storybook:config')!
     expect(rule.selector.path).toBe('.storybook/**')
     expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'storybook-config' })
+  })
+
+  // Chromatic
+  it('chromatic-config-file rule yields role=chromatic-config for chromatic.config.ts', () => {
+    const rules = storybookPlugin.rules()
+    const rule = rules.find(r => r.id === 'storybook:chromatic-config-file')!
+    expect(rule.selector.path).toBe('chromatic.config.{ts,js,mts,mjs,cjs,cts}')
+    expect(rule.yields).toContainEqual({ kind: 'concrete', key: 'role', value: 'chromatic-config' })
   })
 })
