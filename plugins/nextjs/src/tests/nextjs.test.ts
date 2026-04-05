@@ -65,10 +65,18 @@ describe('nextjsPlugin.rules', () => {
     expect(rule.yields).toContainEqual({ kind: 'extracted', key: 'domain', capture: 1 })
   })
 
-  it('client-component rule has content predicate matching use client', () => {
+  it('client-component rule has content predicate matching use client (single quotes)', () => {
     const rules = nextjsPlugin.rules()
     const rule = rules.find(r => r.id === 'nextjs:client-component')!
     expect(rule.selector.content).toBeDefined()
+    // Regex accepts both quote styles: ^['"]use client['"]
     expect(new RegExp(rule.selector.content!).test("'use client'")).toBe(true)
+  })
+
+  it('client-component rule content predicate also matches double-quote form', () => {
+    const rules = nextjsPlugin.rules()
+    const rule = rules.find(r => r.id === 'nextjs:client-component')!
+    expect(rule.selector.content).toBeDefined()
+    expect(new RegExp(rule.selector.content!).test('"use client"')).toBe(true)
   })
 })

@@ -129,6 +129,59 @@ describe('runRules', () => {
   })
 })
 
+describe('runRules — capture normalisation', () => {
+  let projectRoot: string
+
+  beforeEach(() => {
+    projectRoot = join(tmpdir(), `spasco-rules-norm-${Date.now()}`)
+    mkdirSync(projectRoot, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(projectRoot, { recursive: true, force: true })
+  })
+
+  it('strips route group parens from extracted capture — (marketing) → marketing', () => {
+    const rules: Rule[] = [
+      {
+        id: 'page',
+        selector: { path: 'app/($1)/**/page.tsx' },
+        yields: [{ kind: 'extracted', key: 'domain', capture: 1 }],
+      },
+    ]
+    const result = runRules(['app/(marketing)/about/page.tsx'], rules, projectRoot)
+    expect(result).toHaveLength(1)
+    expect(result[0].attributes.domain).toBe('marketing')
+  })
+
+  it('strips dynamic segment brackets from extracted capture — [id] → id', () => {
+    const rules: Rule[] = [
+      {
+        id: 'dynamic-page',
+        selector: { path: 'app/($1)/**/page.tsx' },
+        yields: [{ kind: 'extracted', key: 'domain', capture: 1 }],
+      },
+    ]
+    const result = runRules(['app/[id]/details/page.tsx'], rules, projectRoot)
+    expect(result).toHaveLength(1)
+    expect(result[0].attributes.domain).toBe('id')
+  })
+
+  it('strips route group parens from uncertain capture — (marketing) → marketing', () => {
+    const rules: Rule[] = [
+      {
+        id: 'uncertain-page',
+        selector: { path: 'app/($1)/**' },
+        yields: [{ kind: 'uncertain', capture: 1 }],
+      },
+    ]
+    const result = runRules(['app/(marketing)/about/page.tsx'], rules, projectRoot)
+    expect(result).toHaveLength(1)
+    expect(result[0].attributes['?']).toBe('marketing')
+    expect(result[0].isUncertain).toBe(true)
+  })
+})
+
 describe('runRules — options object signature', () => {
   let projectRoot: string
 

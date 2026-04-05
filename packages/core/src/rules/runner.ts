@@ -38,6 +38,12 @@ function compileRule(rule: Rule): CompiledRule {
   }
 }
 
+function normalizeCapture(value: string): string {
+  if (value.startsWith('(') && value.endsWith(')')) return value.slice(1, -1)
+  if (value.startsWith('[') && value.endsWith(']')) return value.slice(1, -1)
+  return value
+}
+
 function resolveYields(
   yields: RuleYield[],
   captures: (string | undefined)[]
@@ -48,9 +54,9 @@ function resolveYields(
     if (y.kind === 'concrete') {
       attributes[y.key] = y.value
     } else if (y.kind === 'extracted') {
-      attributes[y.key] = captures[y.capture - 1] ?? ''
+      attributes[y.key] = normalizeCapture(captures[y.capture - 1] ?? '')
     } else {
-      attributes['?'] = captures[y.capture - 1] ?? ''
+      attributes['?'] = normalizeCapture(captures[y.capture - 1] ?? '')
       isUncertain = true
     }
   }

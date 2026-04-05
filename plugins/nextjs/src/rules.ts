@@ -30,7 +30,7 @@ export const nextjsRules: Rule[] = [
     id: 'nextjs:client-component',
     selector: {
       path: '**/*.tsx',
-      content: "^'use client'",
+      content: "^['\"]use client['\"]",
     },
     yields: [{ kind: 'concrete', key: 'layer', value: 'client-component' }],
   },
