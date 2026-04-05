@@ -1,8 +1,18 @@
+export type GraphPredicate =
+  | { kind: 'imported-by'; glob: string }
+  | { kind: 'imports'; glob: string }
+  | { kind: 'no-imports' }
+  | { kind: 'imports-count'; op: '>'; n: number }
+  | { kind: 'and'; predicates: GraphPredicate[] }
+  | { kind: 'or'; predicates: GraphPredicate[] }
+
 export interface RuleSelector {
   /** Glob pattern. Use ($1), ($2), etc. for capture groups (single segment each). */
   path: string
   /** Regex string tested against the first 200 chars of the file content. */
   content?: string
+  /** Optional graph predicate — skipped if no import graph is provided. */
+  graph?: GraphPredicate
 }
 
 export interface ConcreteYield {
