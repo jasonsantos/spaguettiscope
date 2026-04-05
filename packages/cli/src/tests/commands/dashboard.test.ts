@@ -150,4 +150,142 @@ describe('runDashboard', () => {
     const outputDir = join(tmpDir, 'reports')
     await expect(runDashboard({ ci: false, output: outputDir, projectRoot: tmpDir })).resolves.not.toThrow()
   })
+
+  describe('inherit-from-import pass', () => {
+    it('test record inherits attributes from imported source file', async () => {
+      // Create source file
+      mkdirSync(join(tmpDir, 'src'), { recursive: true })
+      writeFileSync(join(tmpDir, 'src', 'payments.ts'), `export function pay() {}`)
+      // Create test file that imports from payments
+      writeFileSync(
+        join(tmpDir, 'src', 'payments.test.ts'),
+        `import { pay } from './payments'\ntest('pay', () => {})`
+      )
+      // Create skeleton that assigns domain=payments to src/payments.ts
+      writeFileSync(
+        join(tmpDir, 'spaguettiscope.skeleton.yaml'),
+        `- attributes:\n    domain: payments\n  paths:\n    - src/payments.ts\n`
+      )
+      // Set up allure connector with a record for the test file
+      const allureDir = join(tmpDir, 'allure-results')
+      mkdirSync(allureDir)
+      writeFileSync(
+        join(allureDir, 'test-001-result.json'),
+        JSON.stringify({
+          uuid: 'test-001',
+          name: 'pay',
+          fullName: 'src/payments.test.ts#pay',
+          status: 'passed',
+          start: Date.now() - 100,
+          stop: Date.now(),
+          labels: [
+            { name: 'testSourceFile', value: 'src/payments.test.ts' },
+          ],
+        })
+      )
+      writeFileSync(
+        join(tmpDir, 'spaguettiscope.config.json'),
+        JSON.stringify({ dashboard: { connectors: [{ id: 'allure', resultsDir: allureDir }] } })
+      )
+
+      const outputDir = join(tmpDir, 'reports')
+      await runDashboard({ ci: false, output: outputDir, projectRoot: tmpDir })
+
+      const records = JSON.parse(readFileSync(join(outputDir, 'data', 'records.json'), 'utf-8'))
+      const record = records[0]
+      expect(record.dimensions.domain).toBe('payments')
+    })
+
+    it('direct skeleton annotation wins over inherited attribute', async () => {
+      // Create source file with domain=payments
+      mkdirSync(join(tmpDir, 'src'), { recursive: true })
+      writeFileSync(join(tmpDir, 'src', 'payments.ts'), `export function pay() {}`)
+      // Create test file that imports from payments but is directly annotated domain=auth
+      writeFileSync(
+        join(tmpDir, 'src', 'payments.test.ts'),
+        `import { pay } from './payments'\ntest('pay', () => {})`
+      )
+      // Skeleton: test file → domain=auth, source file → domain=payments
+      writeFileSync(
+        join(tmpDir, 'spaguettiscope.skeleton.yaml'),
+        `- attributes:\n    domain: auth\n  paths:\n    - src/payments.test.ts\n- attributes:\n    domain: payments\n  paths:\n    - src/payments.ts\n`
+      )
+      const allureDir = join(tmpDir, 'allure-results')
+      mkdirSync(allureDir)
+      writeFileSync(
+        join(allureDir, 'test-001-result.json'),
+        JSON.stringify({
+          uuid: 'test-001',
+          name: 'pay',
+          fullName: 'src/payments.test.ts#pay',
+          status: 'passed',
+          start: Date.now() - 100,
+          stop: Date.now(),
+          labels: [
+            { name: 'testSourceFile', value: 'src/payments.test.ts' },
+          ],
+        })
+      )
+      writeFileSync(
+        join(tmpDir, 'spaguettiscope.config.json'),
+        JSON.stringify({ dashboard: { connectors: [{ id: 'allure', resultsDir: allureDir }] } })
+      )
+
+      const outputDir = join(tmpDir, 'reports')
+      await runDashboard({ ci: false, output: outputDir, projectRoot: tmpDir })
+
+      const records = JSON.parse(readFileSync(join(outputDir, 'data', 'records.json'), 'utf-8'))
+      const record = records[0]
+      // Direct annotation wins — should remain auth, not be overwritten with payments
+      expect(record.dimensions.domain).toBe('auth')
+    })
+
+    it('skips inherit-from-import when disabled in config', async () => {
+      // Create source file with domain=payments
+      mkdirSync(join(tmpDir, 'src'), { recursive: true })
+      writeFileSync(join(tmpDir, 'src', 'payments.ts'), `export function pay() {}`)
+      // Create test file that imports from payments (no direct skeleton annotation on test file)
+      writeFileSync(
+        join(tmpDir, 'src', 'payments.test.ts'),
+        `import { pay } from './payments'\ntest('pay', () => {})`
+      )
+      // Skeleton only annotates source file
+      writeFileSync(
+        join(tmpDir, 'spaguettiscope.skeleton.yaml'),
+        `- attributes:\n    domain: payments\n  paths:\n    - src/payments.ts\n`
+      )
+      const allureDir = join(tmpDir, 'allure-results')
+      mkdirSync(allureDir)
+      writeFileSync(
+        join(allureDir, 'test-001-result.json'),
+        JSON.stringify({
+          uuid: 'test-001',
+          name: 'pay',
+          fullName: 'src/payments.test.ts#pay',
+          status: 'passed',
+          start: Date.now() - 100,
+          stop: Date.now(),
+          labels: [
+            { name: 'testSourceFile', value: 'src/payments.test.ts' },
+          ],
+        })
+      )
+      // Config disables inherit-from-import
+      writeFileSync(
+        join(tmpDir, 'spaguettiscope.config.json'),
+        JSON.stringify({
+          dashboard: { connectors: [{ id: 'allure', resultsDir: allureDir }] },
+          rules: { disable: ['inherit-from-import'] },
+        })
+      )
+
+      const outputDir = join(tmpDir, 'reports')
+      await runDashboard({ ci: false, output: outputDir, projectRoot: tmpDir })
+
+      const records = JSON.parse(readFileSync(join(outputDir, 'data', 'records.json'), 'utf-8'))
+      const record = records[0]
+      // Should NOT have inherited domain from payments.ts
+      expect(record.dimensions.domain).toBeUndefined()
+    })
+  })
 });

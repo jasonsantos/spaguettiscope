@@ -1,7 +1,17 @@
 import { writeFileSync, mkdirSync, cpSync, existsSync } from 'node:fs'
-import { join, resolve, isAbsolute } from 'node:path'
+import { join, resolve, isAbsolute, relative } from 'node:path'
 import ora from 'ora'
-import { loadConfig, InferenceEngine, defaultDefinitions, readSkeleton, matchFile } from '@spaguettiscope/core'
+import {
+  loadConfig,
+  InferenceEngine,
+  defaultDefinitions,
+  readSkeleton,
+  matchFile,
+  discoverWorkspaces,
+  buildImportGraph,
+  mergeImportGraphs,
+} from '@spaguettiscope/core'
+import { walkFiles } from '../utils/files.js'
 import {
   AllureConnector,
   PlaywrightConnector,
@@ -92,6 +102,67 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       } catch {
         // File is outside projectRoot or other error — skip silently
       }
+    }
+  }
+
+  // inherit-from-import pass
+  if (!config.rules.disable.includes('inherit-from-import')) {
+    const inheritSpinner = ora('Running inherit-from-import…').start()
+    try {
+      const packages = discoverWorkspaces(projectRoot)
+      const allFiles = walkFiles(projectRoot, projectRoot)
+      const graphs = packages.map(pkg => {
+        const pkgFiles =
+          pkg.rel === '.' ? allFiles : allFiles.filter(f => f.startsWith(pkg.rel + '/'))
+        return buildImportGraph(pkg.root, pkgFiles, projectRoot)
+      })
+      const importGraph = mergeImportGraphs(graphs)
+
+      // Only run if we have a skeleton to look up attributes from
+      if (existsSync(skeletonPath)) {
+        const skeleton = readSkeleton(skeletonPath)
+
+        for (const record of records) {
+          if (record.dimensions.role !== 'test') continue
+
+          const labels = record.metadata?.labels as Array<{ name: string; value: string }> | undefined
+          const testSourceFile = labels?.find(l => l.name === 'testSourceFile')?.value
+          const rawFilePath = testSourceFile ?? record.source.file
+          if (!rawFilePath) continue
+
+          const absFilePath = isAbsolute(rawFilePath) ? rawFilePath : join(projectRoot, rawFilePath)
+
+          let relFilePath: string
+          try {
+            relFilePath = relative(projectRoot, absFilePath)
+          } catch {
+            continue
+          }
+
+          const imports = importGraph.imports.get(relFilePath)
+          if (!imports || imports.size === 0) continue
+
+          const inherited: Record<string, string> = {}
+          for (const importedFile of imports) {
+            try {
+              const attrs = matchFile(join(projectRoot, importedFile), skeleton, projectRoot)
+              Object.assign(inherited, attrs)
+            } catch {
+              continue
+            }
+          }
+
+          // Non-overwrite: direct skeleton annotation wins
+          for (const [k, v] of Object.entries(inherited)) {
+            if (!(k in record.dimensions)) {
+              record.dimensions[k] = v
+            }
+          }
+        }
+      }
+      inheritSpinner.succeed('inherit-from-import applied')
+    } catch (err) {
+      inheritSpinner.warn(`inherit-from-import skipped: ${(err as Error).message}`)
     }
   }
 
