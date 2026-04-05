@@ -44,4 +44,40 @@ describe('loadConfig', () => {
     );
     await expect(loadConfig(tmpDir)).rejects.toThrow('spaguettiscope.config.json');
   });
+
+  it('defaults skeleton path to ./spaguettiscope.skeleton.yaml', async () => {
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.skeleton).toBe('./spaguettiscope.skeleton.yaml')
+  })
+
+  it('reads custom skeleton path from config', async () => {
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ skeleton: './custom/skeleton.yaml', dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.skeleton).toBe('./custom/skeleton.yaml')
+  })
+
+  it('defaults rules.disable to empty array', async () => {
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.rules.disable).toEqual([])
+  })
+
+  it('reads rules.disable from config', async () => {
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ rules: { disable: ['built-in:role:test-ts'] }, dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.rules.disable).toEqual(['built-in:role:test-ts'])
+  })
 });

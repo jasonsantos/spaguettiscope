@@ -26,6 +26,12 @@ export const SpascoConfigSchema = z.object({
   plugin: z.string().optional(),
   dimensions: DimensionOverridesSchema,
   inference: z.record(z.string(), z.array(InferenceRuleSchema)).optional(),
+  skeleton: z.string().default('./spaguettiscope.skeleton.yaml'),
+  rules: z
+    .object({
+      disable: z.array(z.string()).default([]),
+    })
+    .default({ disable: [] }),
   dashboard: z.object({
     connectors: z.array(ConnectorConfigSchema).default([]),
     outputDir: z.string().default('./reports'),
