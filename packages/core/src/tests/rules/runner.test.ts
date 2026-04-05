@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { runRules } from '../../rules/runner.js'
 import type { Rule } from '../../rules/types.js'
+import type { ImportGraph } from '../../graph/index.js'
 
 describe('runRules', () => {
   let projectRoot: string
@@ -103,7 +104,9 @@ describe('runRules', () => {
         yields: [{ kind: 'concrete', key: 'tag', value: 'ts' }],
       },
     ]
-    expect(runRules(['src/index.ts'], rules, projectRoot, new Set(['skip-me']))).toHaveLength(0)
+    expect(
+      runRules(['src/index.ts'], rules, projectRoot, { disabledRuleIds: new Set(['skip-me']) })
+    ).toHaveLength(0)
   })
 
   it('applies content predicate — only matches files with matching content', () => {
@@ -123,5 +126,85 @@ describe('runRules', () => {
     const result = runRules(['Button.tsx', 'Page.tsx'], rules, projectRoot)
     expect(result).toHaveLength(1)
     expect(result[0].attributes.layer).toBe('client-component')
+  })
+})
+
+describe('runRules — options object signature', () => {
+  let projectRoot: string
+
+  beforeEach(() => {
+    projectRoot = join(tmpdir(), `spasco-rules-opts-${Date.now()}`)
+    mkdirSync(projectRoot, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(projectRoot, { recursive: true, force: true })
+  })
+
+  it('accepts disabledRuleIds via options object', () => {
+    const rules: Rule[] = [
+      {
+        id: 'skip-me',
+        selector: { path: 'src/index.ts' },
+        yields: [{ kind: 'concrete', key: 'tag', value: 'root' }],
+      },
+    ]
+    expect(
+      runRules(['src/index.ts'], rules, projectRoot, { disabledRuleIds: new Set(['skip-me']) })
+    ).toHaveLength(0)
+  })
+})
+
+describe('runRules — graph predicates', () => {
+  let projectRoot: string
+
+  beforeEach(() => {
+    projectRoot = join(tmpdir(), `spasco-rules-graph-${Date.now()}`)
+    mkdirSync(projectRoot, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(projectRoot, { recursive: true, force: true })
+  })
+
+  it('applies imported-by predicate using provided graph', () => {
+    const rules: Rule[] = [
+      {
+        id: 'entry-dep',
+        selector: {
+          path: 'src/**/*.ts',
+          graph: { kind: 'imported-by', glob: 'src/index.ts' },
+        },
+        yields: [{ kind: 'concrete', key: 'tag', value: 'entry-dep' }],
+      },
+    ]
+    const graph: ImportGraph = {
+      imports: new Map([['src/index.ts', new Set(['src/utils.ts'])]]),
+      importedBy: new Map([['src/utils.ts', new Set(['src/index.ts'])]]),
+    }
+
+    const result = runRules(['src/utils.ts', 'src/other.ts'], rules, projectRoot, {
+      importGraph: graph,
+    })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].attributes.tag).toBe('entry-dep')
+  })
+
+  it('skips graph predicate rule (no error) when no graph provided', () => {
+    const rules: Rule[] = [
+      {
+        id: 'needs-graph',
+        selector: {
+          path: 'src/**/*.ts',
+          graph: { kind: 'imported-by', glob: 'src/index.ts' },
+        },
+        yields: [{ kind: 'concrete', key: 'tag', value: 'x' }],
+      },
+    ]
+
+    // No importGraph provided — rule simply produces no results
+    const result = runRules(['src/utils.ts'], rules, projectRoot)
+    expect(result).toHaveLength(0)
   })
 })

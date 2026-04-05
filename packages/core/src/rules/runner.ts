@@ -1,6 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Rule, RuleYield, RuleCandidate } from './types.js'
+import type { ImportGraph } from '../graph/index.js'
+import { evaluateGraphPredicate } from '../graph/predicates.js'
+
+export interface RunRulesOptions {
+  disabledRuleIds?: Set<string>
+  importGraph?: ImportGraph
+}
 
 interface CompiledRule {
   rule: Rule
@@ -12,22 +19,15 @@ interface CompiledRule {
 function compileRule(rule: Rule): CompiledRule {
   let captureCount = 0
   let regexStr = rule.selector.path
-    // Escape literal dots
     .replace(/\./g, '\\.')
-    // Replace ($N) capture groups — each matches one path segment
     .replace(/\(\$\d+\)/g, () => {
       captureCount++
       return '([^/]+)'
     })
-    // Replace /**/ (zero or more segments in the middle)
     .replace(/\/\*\*\//g, '/(?:.+/)?')
-    // Replace /** at end (everything under a directory)
     .replace(/\/\*\*$/, '(?:/.+)?')
-    // Replace **/ at start (any prefix path)
     .replace(/^\*\*\//, '(?:.+/)?')
-    // Replace any remaining **
     .replace(/\*\*/g, '.+')
-    // Replace single * (one segment, no slashes)
     .replace(/\*/g, '[^/]*')
 
   return {
@@ -71,17 +71,21 @@ export function runRules(
   relativeFilePaths: string[],
   rules: Rule[],
   projectRoot: string,
-  disabledRuleIds: Set<string> = new Set()
+  options?: RunRulesOptions
 ): RuleCandidate[] {
-  const compiled = rules.filter(r => !disabledRuleIds.has(r.id)).map(compileRule)
+  const disabledRuleIds = options?.disabledRuleIds ?? new Set<string>()
+  const importGraph = options?.importGraph
 
+  const compiled = rules.filter(r => !disabledRuleIds.has(r.id)).map(compileRule)
   const grouped = new Map<string, RuleCandidate>()
 
   for (const filePath of relativeFilePaths) {
     for (const { rule, regex, captureCount, contentRegex } of compiled) {
+      // 1. Path predicate
       const match = filePath.match(regex)
       if (!match) continue
 
+      // 2. Content predicate
       if (contentRegex) {
         try {
           const abs = join(projectRoot, filePath)
@@ -90,6 +94,12 @@ export function runRules(
         } catch {
           continue
         }
+      }
+
+      // 3. Graph predicate — skip rule (not error) when no graph provided
+      if (rule.selector.graph) {
+        if (!importGraph) continue
+        if (!evaluateGraphPredicate(filePath, rule.selector.graph, importGraph)) continue
       }
 
       const captures = match.slice(1, captureCount + 1) as (string | undefined)[]

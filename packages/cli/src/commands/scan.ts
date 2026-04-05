@@ -67,7 +67,7 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
   fileSpinner.succeed(`Found ${allFiles.length} files`)
 
   const ruleSpinner = ora('Running rules…').start()
-  const candidates = runRules(allFiles, builtInRoleRules, projectRoot, disabledRuleIds)
+  const candidates = runRules(allFiles, builtInRoleRules, projectRoot, { disabledRuleIds })
   ruleSpinner.succeed(`Rules produced ${candidates.length} candidates`)
 
   const mergeSpinner = ora('Merging skeleton…').start()
