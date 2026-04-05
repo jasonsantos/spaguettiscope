@@ -85,6 +85,7 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
 
   // Apply skeleton to enrich record dimensions — skeleton takes precedence over inference
   const skeletonPath = resolve(projectRoot, config.skeleton)
+  const skeletonSetKeys = new Map<NormalizedRunRecord, Set<string>>()
   if (existsSync(skeletonPath)) {
     const skeleton = readSkeleton(skeletonPath)
     for (const record of records) {
@@ -99,6 +100,7 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       try {
         const skeletonAttrs = matchFile(absFilePath, skeleton, projectRoot)
         Object.assign(record.dimensions, skeletonAttrs)
+        skeletonSetKeys.set(record, new Set(Object.keys(skeletonAttrs)))
       } catch {
         // File is outside projectRoot or other error — skip silently
       }
@@ -152,9 +154,10 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
             }
           }
 
-          // Non-overwrite: direct skeleton annotation wins
+          // Non-overwrite: direct skeleton annotation wins; inference-set dims may be overridden
+          const skeletonKeys = skeletonSetKeys.get(record) ?? new Set<string>()
           for (const [k, v] of Object.entries(inherited)) {
-            if (!(k in record.dimensions)) {
+            if (!skeletonKeys.has(k)) {
               record.dimensions[k] = v
             }
           }
