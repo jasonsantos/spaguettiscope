@@ -3,6 +3,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { DashboardData } from '../model/dashboard.js'
 import type { NormalizedRunRecord } from '../model/normalized.js'
+import type { Finding } from '../model/findings.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -21,10 +22,12 @@ export function buildDashboardHtml(): string {
 export function writeDashboardData(
   outputDir: string,
   data: DashboardData,
-  records: NormalizedRunRecord[]
+  records: NormalizedRunRecord[],
+  findings: Finding[] = []
 ): void {
   const dataDir = join(outputDir, 'data')
   mkdirSync(dataDir, { recursive: true })
   writeFileSync(join(dataDir, 'summary.json'), JSON.stringify(data), 'utf-8')
   writeFileSync(join(dataDir, 'records.json'), JSON.stringify(records), 'utf-8')
+  writeFileSync(join(dataDir, 'findings.json'), JSON.stringify(findings), 'utf-8')
 }
