@@ -83,8 +83,9 @@ describe('runDashboard', () => {
       JSON.stringify({ dashboard: { connectors: [{ id: 'allure', resultsDir: allureDir }] } })
     )
     // Write a skeleton that assigns domain=checkout to src/checkout/**
+    mkdirSync(join(tmpDir, '.spasco'), { recursive: true })
     writeFileSync(
-      join(tmpDir, 'spaguettiscope.skeleton.yaml'),
+      join(tmpDir, '.spasco', 'skeleton.yaml'),
       `- attributes:\n    domain: checkout\n    layer: bff\n  paths:\n    - src/checkout/**\n`
     )
 
@@ -119,7 +120,7 @@ describe('runDashboard', () => {
     const outputDir = join(tmpDir, 'reports')
     // First run — history file doesn't exist yet
     await runDashboard({ ci: true, output: outputDir, projectRoot: tmpDir })
-    const historyPath = join(tmpDir, 'reports', '.spaguetti-history.jsonl')
+    const historyPath = join(tmpDir, '.spasco', 'history.jsonl')
     expect(existsSync(historyPath)).toBe(true)
     // Second run — history file exists; should be read back
     await runDashboard({ ci: true, output: outputDir, projectRoot: tmpDir })
@@ -162,8 +163,9 @@ describe('runDashboard', () => {
         `import { pay } from './payments'\ntest('pay', () => {})`
       )
       // Create skeleton that assigns domain=payments to src/payments.ts
+      mkdirSync(join(tmpDir, '.spasco'), { recursive: true })
       writeFileSync(
-        join(tmpDir, 'spaguettiscope.skeleton.yaml'),
+        join(tmpDir, '.spasco', 'skeleton.yaml'),
         `- attributes:\n    domain: payments\n  paths:\n    - src/payments.ts\n`
       )
       // Set up allure connector with a record for the test file
@@ -206,8 +208,9 @@ describe('runDashboard', () => {
         `import { pay } from './payments'\ntest('pay', () => {})`
       )
       // Skeleton: test file → domain=auth, source file → domain=payments
+      mkdirSync(join(tmpDir, '.spasco'), { recursive: true })
       writeFileSync(
-        join(tmpDir, 'spaguettiscope.skeleton.yaml'),
+        join(tmpDir, '.spasco', 'skeleton.yaml'),
         `- attributes:\n    domain: auth\n  paths:\n    - src/payments.test.ts\n- attributes:\n    domain: payments\n  paths:\n    - src/payments.ts\n`
       )
       const allureDir = join(tmpDir, 'allure-results')
@@ -250,8 +253,9 @@ describe('runDashboard', () => {
         `import { pay } from './payments'\ntest('pay', () => {})`
       )
       // Skeleton only annotates source file
+      mkdirSync(join(tmpDir, '.spasco'), { recursive: true })
       writeFileSync(
-        join(tmpDir, 'spaguettiscope.skeleton.yaml'),
+        join(tmpDir, '.spasco', 'skeleton.yaml'),
         `- attributes:\n    domain: payments\n  paths:\n    - src/payments.ts\n`
       )
       const allureDir = join(tmpDir, 'allure-results')

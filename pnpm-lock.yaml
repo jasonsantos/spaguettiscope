@@ -343,7 +343,103 @@ importers:
         specifier: latest
         version: 4.1.2(@types/node@25.5.2)(jsdom@29.0.1)(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.5.0)(@types/node@25.5.2)(jiti@2.5.1)(yaml@2.8.3))
 
+  plugins/drizzle:
+    dependencies:
+      '@spaguettiscope/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
+      typescript:
+        specifier: latest
+        version: 6.0.2
+      vitest:
+        specifier: latest
+        version: 4.1.2(@types/node@25.5.2)(jsdom@29.0.1)(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.5.0)(@types/node@25.5.2)(jiti@2.5.1)(yaml@2.8.3))
+
+  plugins/electron:
+    dependencies:
+      '@spaguettiscope/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
+      typescript:
+        specifier: latest
+        version: 6.0.2
+      vitest:
+        specifier: latest
+        version: 4.1.2(@types/node@25.5.2)(jsdom@29.0.1)(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.5.0)(@types/node@25.5.2)(jiti@2.5.1)(yaml@2.8.3))
+
   plugins/nextjs:
+    dependencies:
+      '@spaguettiscope/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
+      typescript:
+        specifier: latest
+        version: 6.0.2
+      vitest:
+        specifier: latest
+        version: 4.1.2(@types/node@25.5.2)(jsdom@29.0.1)(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.5.0)(@types/node@25.5.2)(jiti@2.5.1)(yaml@2.8.3))
+
+  plugins/playwright:
+    dependencies:
+      '@spaguettiscope/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
+      typescript:
+        specifier: latest
+        version: 6.0.2
+      vitest:
+        specifier: latest
+        version: 4.1.2(@types/node@25.5.2)(jsdom@29.0.1)(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.5.0)(@types/node@25.5.2)(jiti@2.5.1)(yaml@2.8.3))
+
+  plugins/prisma:
+    dependencies:
+      '@spaguettiscope/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
+      typescript:
+        specifier: latest
+        version: 6.0.2
+      vitest:
+        specifier: latest
+        version: 4.1.2(@types/node@25.5.2)(jsdom@29.0.1)(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.5.0)(@types/node@25.5.2)(jiti@2.5.1)(yaml@2.8.3))
+
+  plugins/react:
+    dependencies:
+      '@spaguettiscope/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
+      typescript:
+        specifier: latest
+        version: 6.0.2
+      vitest:
+        specifier: latest
+        version: 4.1.2(@types/node@25.5.2)(jsdom@29.0.1)(vite@8.0.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.5.0)(@types/node@25.5.2)(jiti@2.5.1)(yaml@2.8.3))
+
+  plugins/storybook:
     dependencies:
       '@spaguettiscope/core':
         specifier: workspace:*
