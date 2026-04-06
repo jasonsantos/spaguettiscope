@@ -59,6 +59,13 @@ describe('flaky-test rule', () => {
     expect(index?.h1.total).toBe(2)
   })
 
+  it('does not count skipped records in flakiness index', () => {
+    const ctx = makeCtx()
+    flakyTestRule.run(makeRecord('r1', 'h1', 'skipped'), ctx)
+    const index = ctx.cache.get<Record<string, { pass: number; fail: number; total: number }>>('flakiness-index')
+    expect(index?.h1).toBeUndefined()  // skipped should not update the index
+  })
+
   it('emits no finding when record has no historyId', () => {
     const ctx = makeCtx()
     const record: TestRecord = { id: 'r1', status: 'failed', dimensions: {} }

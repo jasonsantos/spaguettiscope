@@ -103,7 +103,11 @@ program
     try {
       const { summary } = await runAnalyzeCommand({ ci: true })
       const hasErrors =
-        options.severity === 'warning' ? summary.error + summary.warning > 0 : summary.error > 0
+        options.severity === 'info'
+          ? summary.error + summary.warning + summary.info > 0
+          : options.severity === 'warning'
+            ? summary.error + summary.warning > 0
+            : summary.error > 0
       if (hasErrors) process.exit(1)
     } catch (err) {
       console.error((err as Error).message)

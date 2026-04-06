@@ -41,6 +41,9 @@ export const flakyTestRule: AnalysisRule<'records'> = {
     }
 
     // Update index with current run.
+    const isCountable = record.status === 'passed' || record.status === 'failed' || record.status === 'broken'
+    if (!isCountable) return finding ? [finding] : []
+
     const isPassing = record.status === 'passed'
     index[record.historyId] = {
       pass: entry.pass + (isPassing ? 1 : 0),

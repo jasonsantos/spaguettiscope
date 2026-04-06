@@ -11,7 +11,15 @@ export const coverageGapRule: AnalysisRule<'files'> = {
     if (!TARGETED_ROLES.has(item.dimensions.role ?? '')) return []
 
     const importers = ctx.importGraph?.importedBy.get(item.file)
-    if (importers && importers.size > 0) return []
+    if (importers) {
+      for (const importer of importers) {
+        const importerDims = ctx.topology.get(importer)
+        const importerRole = importerDims?.role ?? ''
+        if (['test', 'spec', 'e2e', 'bdd-spec', 'spec-helper'].includes(importerRole)) {
+          return []
+        }
+      }
+    }
 
     return [
       {

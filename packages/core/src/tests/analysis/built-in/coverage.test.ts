@@ -42,6 +42,19 @@ describe('coverage-gap rule', () => {
     expect(findings).toHaveLength(0)
   })
 
+  it('emits coverage-gap when only a non-test file imports it', () => {
+    const ctx = makeCtx(
+      { 'src/auth/page.tsx': ['src/layout.tsx'] },  // layout imports page — not a test
+      {
+        'src/auth/page.tsx': { role: 'page' },
+        'src/layout.tsx': { role: 'layout' },
+      }
+    )
+    const item: FileItem = { file: 'src/auth/page.tsx', dimensions: { role: 'page' } }
+    const findings = coverageGapRule.run(item, ctx)
+    expect(findings).toHaveLength(1)  // should still flag it — no test importer
+  })
+
   it('emits no finding for files with non-targeted roles', () => {
     const ctx = makeCtx({})
     const item: FileItem = { file: 'src/util.ts', dimensions: { role: 'utility' } }
