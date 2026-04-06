@@ -92,7 +92,7 @@ describe('loadConfig', () => {
 
   it('defaults skeleton path to .spasco/skeleton.yaml', async () => {
     writeFileSync(
-      join(tmpDir, 'spasco.config.json'),
+      join(tmpDir, 'spaguettiscope.config.json'),
       JSON.stringify({ dashboard: { connectors: [] } })
     )
     const config = await loadConfig(tmpDir)
@@ -101,7 +101,7 @@ describe('loadConfig', () => {
 
   it('defaults dashboard.outputDir to .spasco/reports', async () => {
     writeFileSync(
-      join(tmpDir, 'spasco.config.json'),
+      join(tmpDir, 'spaguettiscope.config.json'),
       JSON.stringify({ dashboard: { connectors: [] } })
     )
     const config = await loadConfig(tmpDir)
@@ -110,7 +110,7 @@ describe('loadConfig', () => {
 
   it('defaults dashboard.historyFile to .spasco/history.jsonl', async () => {
     writeFileSync(
-      join(tmpDir, 'spasco.config.json'),
+      join(tmpDir, 'spaguettiscope.config.json'),
       JSON.stringify({ dashboard: { connectors: [] } })
     )
     const config = await loadConfig(tmpDir)
@@ -119,10 +119,19 @@ describe('loadConfig', () => {
 
   it('defaults analysis.intermediates to .spasco/intermediates.json', async () => {
     writeFileSync(
-      join(tmpDir, 'spasco.config.json'),
+      join(tmpDir, 'spaguettiscope.config.json'),
       JSON.stringify({ dashboard: { connectors: [] } })
     )
     const config = await loadConfig(tmpDir)
     expect(config.analysis.intermediates).toBe('.spasco/intermediates.json')
+  })
+
+  it('defaults analysisPlugins to empty array', async () => {
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.analysisPlugins).toEqual([])
   })
 });
