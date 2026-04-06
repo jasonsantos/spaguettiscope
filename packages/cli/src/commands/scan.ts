@@ -1,4 +1,5 @@
-import { resolve } from 'node:path'
+import { resolve, dirname } from 'node:path'
+import { mkdirSync } from 'node:fs'
 import ora from 'ora'
 import {
   loadConfig,
@@ -103,6 +104,7 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
 
   // 7. Merge skeleton
   const mergeSpinner = ora('Merging skeleton…').start()
+  mkdirSync(dirname(skeletonPath), { recursive: true })
   const existing = readSkeleton(skeletonPath)
   const { skeleton, added, unchanged, markedStale } = mergeSkeleton(
     existing,

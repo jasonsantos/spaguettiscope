@@ -15,6 +15,7 @@ const IGNORED_DIRS = new Set([
   '.vite',
   'allure-results',
   'allure-report',
+  '.spasco',
 ])
 
 export function walkFiles(dir: string, projectRoot: string): string[] {
