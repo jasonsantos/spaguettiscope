@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { runDashboard } from './commands/dashboard.js';
 import { runScan } from './commands/scan.js';
 import { runAnnotateList, runAnnotateResolve } from './commands/annotate.js';
+import { runAnalyzeCommand } from './commands/analyze.js';
 
 const program = new Command();
 
@@ -80,5 +81,34 @@ annotate
       }
     }
   );
+
+program
+  .command('analyze')
+  .description('Run analysis rules and surface findings')
+  .option('--ci', 'CI mode: no HTML output, just terminal summary')
+  .action(async options => {
+    try {
+      await runAnalyzeCommand({ ci: options.ci })
+    } catch (err) {
+      console.error((err as Error).message)
+      process.exit(1)
+    }
+  })
+
+program
+  .command('check')
+  .description('Run analysis rules and exit 1 if any error-severity findings exist')
+  .option('--severity <level>', 'Treat this severity and above as errors', 'error')
+  .action(async options => {
+    try {
+      const { summary } = await runAnalyzeCommand({ ci: true })
+      const hasErrors =
+        options.severity === 'warning' ? summary.error + summary.warning > 0 : summary.error > 0
+      if (hasErrors) process.exit(1)
+    } catch (err) {
+      console.error((err as Error).message)
+      process.exit(1)
+    }
+  })
 
 program.parse();
