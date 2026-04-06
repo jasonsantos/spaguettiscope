@@ -1,5 +1,5 @@
 import { resolve, dirname } from 'node:path'
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, existsSync, writeFileSync } from 'node:fs'
 import ora from 'ora'
 import {
   loadConfig,
@@ -105,6 +105,10 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
   // 7. Merge skeleton
   const mergeSpinner = ora('Merging skeleton…').start()
   mkdirSync(dirname(skeletonPath), { recursive: true })
+  const spascoGitignore = resolve(projectRoot, '.spasco', '.gitignore')
+  if (!existsSync(spascoGitignore)) {
+    writeFileSync(spascoGitignore, 'reports/\nintermediates.json\n')
+  }
   const existing = readSkeleton(skeletonPath)
   const { skeleton, added, unchanged, markedStale } = mergeSkeleton(
     existing,
