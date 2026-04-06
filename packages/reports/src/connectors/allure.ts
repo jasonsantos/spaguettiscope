@@ -14,10 +14,12 @@ interface AllureResult {
   uuid: string;
   name: string;
   fullName?: string;
+  historyId?: string;
   status: string;
   start?: number;
   stop?: number;
   labels?: AllureLabel[];
+  statusDetails?: { message?: string; trace?: string };
 }
 
 const ALLURE_STATUS_MAP: Record<string, TestStatus> = {
@@ -57,7 +59,10 @@ export class AllureConnector implements Connector {
       const labels: AllureLabel[] = raw.labels ?? [];
       const getLabel = (name: string) => labels.find(l => l.name === name)?.value;
 
-      const sourceFile = getLabel('testSourceFile');
+      const sourceFile =
+        getLabel('testSourceFile') ??
+        (raw.fullName?.includes('#') ? raw.fullName.split('#')[0] : undefined) ??
+        getLabel('package')?.replace(/\./g, '/');
       const feature = getLabel('feature');
 
       let dimensions = sourceFile
@@ -79,7 +84,11 @@ export class AllureConnector implements Connector {
         duration: raw.start && raw.stop ? raw.stop - raw.start : 0,
         dimensions,
         source: { file: filePath, connectorId: this.id },
-        metadata: { labels },
+        metadata: {
+          labels,
+          historyId: raw.historyId,
+          statusDetails: raw.statusDetails,
+        },
       });
     }
 
