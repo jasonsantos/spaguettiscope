@@ -113,6 +113,17 @@ spasco dashboard --output ./my-reports    # custom output directory
 spasco dashboard --ci                     # terminal summary only, no HTML
 ```
 
+### `spasco init`
+
+Auto-detects installed tools (vitest, lcov, playwright, allure, eslint, typescript) by scanning the
+repository and writes a ready-to-use `spasco.config.json`. Refuses if a config already exists.
+
+```bash
+spasco init                          # auto-detect, write config
+spasco init --interactive            # confirm each detected connector
+spasco init --plugins @my/plugin     # also run detectors from a plugin
+```
+
 ### `spasco analyze`
 
 Runs all analysis rules (built-in + configured `analysisPlugins`) over the topology, import graph,

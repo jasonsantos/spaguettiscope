@@ -59,6 +59,7 @@ spasco analyze
 
 | Command                        | Description                                                        |
 | ------------------------------ | ------------------------------------------------------------------ |
+| `spasco init`                  | Auto-detect tools and write `spasco.config.json`                   |
 | `spasco scan`                  | Scan the project: collect files, build topology, read test results |
 | `spasco dashboard`             | Generate and serve the HTML dashboard (opens in browser)           |
 | `spasco analyze`               | Run analysis rules and print findings; exits non-zero on errors    |
