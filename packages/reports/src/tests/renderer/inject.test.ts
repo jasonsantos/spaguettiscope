@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, rmSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { writeDashboardData } from '../renderer/inject.js'
-import type { DashboardData } from '../model/dashboard.js'
-import type { Finding } from '../model/findings.js'
+import { writeDashboardData } from '../../renderer/inject.js'
+import type { DashboardData } from '../../model/dashboard.js'
+import type { Finding } from '../../model/findings.js'
 
 function makeData(): DashboardData {
   return {
