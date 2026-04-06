@@ -71,8 +71,10 @@ export async function runInit(options: InitOptions = {}): Promise<void> {
 
   // Interactive confirmation
   if (options.interactive && process.stdout.isTTY) {
-    detected = await promptConfirmConnectors(detected)
-    projectName = await promptProjectName(projectName)
+    const rl = createInterface({ input: process.stdin, output: process.stdout })
+    detected = await promptConfirmConnectors(detected, rl)
+    projectName = await promptProjectName(projectName, rl)
+    rl.close()
   }
 
   // Build config
@@ -96,23 +98,20 @@ export async function runInit(options: InitOptions = {}): Promise<void> {
   printSuccess(`Config written → ${configPath}\nRun: spasco dashboard`)
 }
 
-async function promptProjectName(current: string | undefined): Promise<string | undefined> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout })
+async function promptProjectName(current: string | undefined, rl: ReturnType<typeof createInterface>): Promise<string | undefined> {
   const answer = await rl.question(`Project name [${current ?? ''}]: `)
-  rl.close()
   return answer.trim() || current
 }
 
 async function promptConfirmConnectors(
-  detected: DetectedConnector[]
+  detected: DetectedConnector[],
+  rl: ReturnType<typeof createInterface>
 ): Promise<DetectedConnector[]> {
   if (detected.length === 0) return []
-  const rl = createInterface({ input: process.stdin, output: process.stdout })
   const kept: DetectedConnector[] = []
   for (const d of detected) {
     const answer = await rl.question(`Include ${d.source}? [Y/n] `)
     if (answer.trim().toLowerCase() !== 'n') kept.push(d)
   }
-  rl.close()
   return kept
 }

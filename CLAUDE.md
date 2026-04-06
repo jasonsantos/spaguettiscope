@@ -158,6 +158,7 @@ Functional modules (no classes):
 | `graph`          | `buildImportGraph`, `mergeImportGraphs`, `ImportGraph`                                                                                                          |
 | `workspace`      | `discoverWorkspaces(root)`                                                                                                                                      |
 | `analysis`       | `runAnalysis`, `builtInAnalysisRules`, `loadIntermediateCache`, `saveIntermediateCache`, `createIntermediateCache`, `Finding`, `AnalysisRule`, `AnalysisPlugin` |
+| `init`           | `builtInDetectors`, `InitDetector`, `DetectedConnector`                                                                                                         |
 
 ### `@spaguettiscope/reports`
 
