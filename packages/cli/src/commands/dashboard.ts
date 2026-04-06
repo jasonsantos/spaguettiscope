@@ -14,6 +14,7 @@ import {
   builtInAnalysisRules,
   loadIntermediateCache,
   saveIntermediateCache,
+  type AnalysisRule,
   type Finding,
 } from '@spaguettiscope/core'
 import { walkFiles } from '../utils/files.js'
@@ -119,11 +120,12 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
   }
 
   // inherit-from-import pass
+  const allFiles = walkFiles(projectRoot, projectRoot)
+  const packages = discoverWorkspaces(projectRoot)
+
   if (!config.rules.disable.includes('inherit-from-import')) {
     const inheritSpinner = ora('Running inherit-from-import…').start()
     try {
-      const packages = discoverWorkspaces(projectRoot)
-      const allFiles = walkFiles(projectRoot, projectRoot)
       const graphs = packages.map(pkg => {
         const pkgFiles =
           pkg.rel === '.' ? allFiles : allFiles.filter(f => f.startsWith(pkg.rel + '/'))
@@ -223,10 +225,9 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
     writeFileSync(outputPath, html, 'utf-8')
 
     // Run analysis to populate findings tab
-    const analysisAllFiles = walkFiles(projectRoot, projectRoot)
     const analysisTopology = new Map<string, Record<string, string>>()
     if (skeleton) {
-      for (const relFile of analysisAllFiles) {
+      for (const relFile of allFiles) {
         try {
           const match = matchFile(join(projectRoot, relFile), skeleton, projectRoot)
           analysisTopology.set(relFile, match)
@@ -236,25 +237,44 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       }
     }
 
-    const analysisPkgs = discoverWorkspaces(projectRoot)
     const analysisPkgFiles = new Map<string, string[]>()
-    for (const pkg of analysisPkgs) analysisPkgFiles.set(pkg.rel, [])
-    for (const f of analysisAllFiles) {
-      const matchingPkg = analysisPkgs.find(pkg => pkg.rel === '.' || f.startsWith(pkg.rel + '/'))
+    for (const pkg of packages) analysisPkgFiles.set(pkg.rel, [])
+    for (const f of allFiles) {
+      const matchingPkg = packages.find(pkg => pkg.rel === '.' || f.startsWith(pkg.rel + '/'))
       if (matchingPkg) analysisPkgFiles.get(matchingPkg.rel)!.push(f)
     }
     const analysisImportGraph = mergeImportGraphs(
-      analysisPkgs.map(pkg =>
+      packages.map(pkg =>
         buildImportGraph(pkg.root, analysisPkgFiles.get(pkg.rel) ?? [], projectRoot)
       )
     )
 
+    const pluginRules: AnalysisRule[] = []
+    for (const pluginId of config.analysisPlugins) {
+      try {
+        const mod = (await import(pluginId)) as Record<string, unknown>
+        const plugin = (mod.default ?? Object.values(mod)[0]) as {
+          id: string
+          canApply(r: string): boolean
+          rules(): AnalysisRule[]
+        }
+        if (plugin && typeof plugin.canApply === 'function') {
+          for (const pkg of packages) {
+            if (!plugin.canApply(pkg.root)) continue
+            pluginRules.push(...plugin.rules())
+          }
+        }
+      } catch {
+        printWarning(`Failed to load analysis plugin: ${pluginId}`)
+      }
+    }
+
     const intermediatesPath = resolve(projectRoot, config.analysis.intermediates)
     const analysisCache = loadIntermediateCache(intermediatesPath)
     const findings: Finding[] = runAnalysis({
-      files: analysisAllFiles,
+      files: allFiles,
       topology: analysisTopology,
-      rules: builtInAnalysisRules,
+      rules: [...builtInAnalysisRules, ...pluginRules],
       importGraph: analysisImportGraph,
       cache: analysisCache,
     })
