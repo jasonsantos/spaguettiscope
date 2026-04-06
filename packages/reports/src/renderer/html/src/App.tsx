@@ -3,15 +3,17 @@ import { LayerHealth } from './views/LayerHealth.tsx'
 import { Overview } from './views/Overview.tsx'
 import { E2EConfidence } from './views/E2EConfidence.tsx'
 import { Drilldown } from './views/Drilldown.tsx'
+import { Findings } from './views/Findings.tsx'
 import type { DashboardData } from './types.ts'
 
-type TabId = 'overview' | 'layer-health' | 'e2e' | 'drilldown'
+type TabId = 'overview' | 'layer-health' | 'e2e' | 'drilldown' | 'findings'
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'overview', label: 'Overview' },
   { id: 'layer-health', label: 'Layer Health' },
   { id: 'e2e', label: 'E2E Confidence' },
   { id: 'drilldown', label: 'Drill Down' },
+  { id: 'findings', label: 'Findings' },
 ]
 
 export function App() {
@@ -86,6 +88,7 @@ export function App() {
         {activeTab === 'layer-health' && <LayerHealth dimensions={data.dimensions} />}
         {activeTab === 'e2e' && <E2EConfidence playwrightData={data.byConnector?.['playwright']} />}
         {activeTab === 'drilldown' && <Drilldown />}
+        {activeTab === 'findings' && <Findings />}
       </main>
     </div>
   )
