@@ -10,6 +10,11 @@ import {
   discoverWorkspaces,
   buildImportGraph,
   mergeImportGraphs,
+  runAnalysis,
+  builtInAnalysisRules,
+  loadIntermediateCache,
+  saveIntermediateCache,
+  type Finding,
 } from '@spaguettiscope/core'
 import { walkFiles } from '../utils/files.js'
 import {
@@ -217,7 +222,45 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
     const outputPath = join(outputDir, 'index.html')
     writeFileSync(outputPath, html, 'utf-8')
 
-    writeDashboardData(outputDir, dashboardData, records)
+    // Run analysis to populate findings tab
+    const analysisAllFiles = walkFiles(projectRoot, projectRoot)
+    const analysisTopology = new Map<string, Record<string, string>>()
+    if (skeleton) {
+      for (const relFile of analysisAllFiles) {
+        try {
+          const match = matchFile(join(projectRoot, relFile), skeleton, projectRoot)
+          analysisTopology.set(relFile, match)
+        } catch {
+          // file outside projectRoot or other error — skip
+        }
+      }
+    }
+
+    const analysisPkgs = discoverWorkspaces(projectRoot)
+    const analysisPkgFiles = new Map<string, string[]>()
+    for (const pkg of analysisPkgs) analysisPkgFiles.set(pkg.rel, [])
+    for (const f of analysisAllFiles) {
+      const matchingPkg = analysisPkgs.find(pkg => pkg.rel === '.' || f.startsWith(pkg.rel + '/'))
+      if (matchingPkg) analysisPkgFiles.get(matchingPkg.rel)!.push(f)
+    }
+    const analysisImportGraph = mergeImportGraphs(
+      analysisPkgs.map(pkg =>
+        buildImportGraph(pkg.root, analysisPkgFiles.get(pkg.rel) ?? [], projectRoot)
+      )
+    )
+
+    const intermediatesPath = resolve(projectRoot, config.analysis.intermediates)
+    const analysisCache = loadIntermediateCache(intermediatesPath)
+    const findings: Finding[] = runAnalysis({
+      files: analysisAllFiles,
+      topology: analysisTopology,
+      rules: builtInAnalysisRules,
+      importGraph: analysisImportGraph,
+      cache: analysisCache,
+    })
+    saveIntermediateCache(intermediatesPath, analysisCache)
+
+    writeDashboardData(outputDir, dashboardData, records, findings)
 
     // Copy renderer assets (JS bundle) alongside index.html
     const rendererDist = getRendererAssetsDir()
