@@ -7,3 +7,4 @@ export * from './plugins/types.js';
 export * from './graph/index.js';
 export * from './graph/predicates.js';
 export * from './analysis/index.js';
+export * from './init/index.js';
