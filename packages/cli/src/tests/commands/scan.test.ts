@@ -8,7 +8,7 @@ import { runScan } from '../../commands/scan.js'
 function makeProject(dir: string, files: Record<string, string> = {}) {
   mkdirSync(dir, { recursive: true })
   writeFileSync(
-    join(dir, 'spaguettiscope.config.json'),
+    join(dir, 'spasco.config.json'),
     JSON.stringify({ name: 'test-project', dashboard: { connectors: [] } })
   )
   for (const [rel, content] of Object.entries(files)) {
@@ -32,7 +32,7 @@ describe('runScan', () => {
   it('creates skeleton file with draft entry for test files', async () => {
     makeProject(dir, { 'src/auth/auth.test.ts': '// test' })
     await runScan({ projectRoot: dir })
-    const skeletonPath = join(dir, 'spaguettiscope.skeleton.yaml')
+    const skeletonPath = join(dir, '.spasco', 'skeleton.yaml')
     expect(existsSync(skeletonPath)).toBe(true)
     const entries = parse(readFileSync(skeletonPath, 'utf-8')) as any[]
     const testEntry = entries.find((e: any) => e.attributes?.role === 'test')
@@ -44,7 +44,7 @@ describe('runScan', () => {
     // First scan
     await runScan({ projectRoot: dir })
     // Manually annotate skeleton
-    const skeletonPath = join(dir, 'spaguettiscope.skeleton.yaml')
+    const skeletonPath = join(dir, '.spasco', 'skeleton.yaml')
     writeFileSync(
       skeletonPath,
       `- attributes:\n    domain: auth\n    layer: service\n  paths:\n    - src/auth/**\n`
@@ -60,7 +60,8 @@ describe('runScan', () => {
   it('marks entries stale when their paths no longer exist', async () => {
     makeProject(dir, {})
     // Start with a skeleton entry for a path that has no files
-    const skeletonPath = join(dir, 'spaguettiscope.skeleton.yaml')
+    const skeletonPath = join(dir, '.spasco', 'skeleton.yaml')
+    mkdirSync(join(dir, '.spasco'), { recursive: true })
     writeFileSync(skeletonPath, `- attributes:\n    domain: old\n  paths:\n    - src/old/**\n`)
     await runScan({ projectRoot: dir })
     const entries = parse(readFileSync(skeletonPath, 'utf-8')) as any[]
@@ -100,7 +101,7 @@ describe('runScan — monorepo with plugin', () => {
       'export async function GET() {}'
     )
     writeFileSync(
-      join(dir, 'spaguettiscope.config.json'),
+      join(dir, 'spasco.config.json'),
       JSON.stringify({
         name: 'test',
         plugins: ['@spaguettiscope/plugin-nextjs'],
@@ -110,7 +111,7 @@ describe('runScan — monorepo with plugin', () => {
 
     await runScan({ projectRoot: dir })
 
-    const skeletonPath = join(dir, 'spaguettiscope.skeleton.yaml')
+    const skeletonPath = join(dir, '.spasco', 'skeleton.yaml')
     const entries = parse(readFileSync(skeletonPath, 'utf-8')) as Array<{
       attributes: Record<string, string>
       paths: string[]

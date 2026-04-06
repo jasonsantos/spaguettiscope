@@ -6,12 +6,12 @@ import { runAnnotateResolve } from '../../commands/annotate.js'
 import { readSkeleton } from '@spaguettiscope/core'
 
 function makeProject(dir: string, skeletonYaml: string) {
-  mkdirSync(dir, { recursive: true })
+  mkdirSync(join(dir, '.spasco'), { recursive: true })
   writeFileSync(
-    join(dir, 'spaguettiscope.config.json'),
+    join(dir, 'spasco.config.json'),
     JSON.stringify({ name: 'test', dashboard: { connectors: [] } })
   )
-  writeFileSync(join(dir, 'spaguettiscope.skeleton.yaml'), skeletonYaml)
+  writeFileSync(join(dir, '.spasco', 'skeleton.yaml'), skeletonYaml)
 }
 
 describe('runAnnotateResolve', () => {
@@ -28,7 +28,7 @@ describe('runAnnotateResolve', () => {
   it('resolves ? entry to named dimension', async () => {
     makeProject(dir, `- attributes:\n    "?": auth\n  paths:\n    - src/auth/**\n  draft: true\n`)
     await runAnnotateResolve({ values: ['auth'], all: false, as: 'domain', projectRoot: dir })
-    const skeleton = readSkeleton(join(dir, 'spaguettiscope.skeleton.yaml'))
+    const skeleton = readSkeleton(join(dir, '.spasco', 'skeleton.yaml'))
     expect(skeleton.entries[0].attributes).toEqual({ domain: 'auth' })
     expect((skeleton.entries[0] as any).draft).toBeUndefined()
   })
@@ -42,7 +42,7 @@ describe('runAnnotateResolve', () => {
       add: 'layer=service,tag=tentative',
       projectRoot: dir,
     })
-    const skeleton = readSkeleton(join(dir, 'spaguettiscope.skeleton.yaml'))
+    const skeleton = readSkeleton(join(dir, '.spasco', 'skeleton.yaml'))
     expect(skeleton.entries[0].attributes).toEqual({
       domain: 'auth',
       layer: 'service',
@@ -67,7 +67,7 @@ describe('runAnnotateResolve', () => {
       ].join('\n')
     )
     await runAnnotateResolve({ values: [], all: true, as: 'domain', projectRoot: dir })
-    const skeleton = readSkeleton(join(dir, 'spaguettiscope.skeleton.yaml'))
+    const skeleton = readSkeleton(join(dir, '.spasco', 'skeleton.yaml'))
     expect(skeleton.entries[0].attributes).toEqual({ domain: 'auth' })
     expect(skeleton.entries[1].attributes).toEqual({ domain: 'clients' })
   })
@@ -89,7 +89,7 @@ describe('runAnnotateResolve', () => {
       ].join('\n')
     )
     await runAnnotateResolve({ values: ['auth'], all: false, as: 'domain', projectRoot: dir })
-    const skeleton = readSkeleton(join(dir, 'spaguettiscope.skeleton.yaml'))
+    const skeleton = readSkeleton(join(dir, '.spasco', 'skeleton.yaml'))
     expect(skeleton.entries[0].attributes).toEqual({ domain: 'auth' })
     expect(skeleton.entries[1].attributes['?']).toBe('clients')
   })
@@ -100,7 +100,7 @@ describe('runAnnotateResolve', () => {
       [`- attributes:`, `    domain: checkout`, `  paths:`, `    - src/checkout/**`].join('\n')
     )
     await runAnnotateResolve({ values: [], all: true, as: 'domain', projectRoot: dir })
-    const skeleton = readSkeleton(join(dir, 'spaguettiscope.skeleton.yaml'))
+    const skeleton = readSkeleton(join(dir, '.spasco', 'skeleton.yaml'))
     expect(skeleton.entries[0].attributes).toEqual({ domain: 'checkout' })
   })
 })
