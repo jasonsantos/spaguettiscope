@@ -53,8 +53,8 @@ const bffLayerBoundary: AnalysisRule<'edges'> = {
   needs: [],
   corpus: 'edges',
   run(item: EdgeItem, _ctx: AnalysisContext): Finding[] {
-    if (item.to.dimensions.layer !== 'bff') return []
     if (item.from.dimensions.layer !== 'client-component') return []
+    if (item.to.dimensions.layer !== 'bff') return []
     return [
       {
         ruleId: 'nextjs:bff-layer-boundary',
