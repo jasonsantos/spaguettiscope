@@ -45,15 +45,6 @@ describe('loadConfig', () => {
     await expect(loadConfig(tmpDir)).rejects.toThrow('spaguettiscope.config.json');
   });
 
-  it('defaults skeleton path to ./spaguettiscope.skeleton.yaml', async () => {
-    writeFileSync(
-      join(tmpDir, 'spaguettiscope.config.json'),
-      JSON.stringify({ dashboard: { connectors: [] } })
-    )
-    const config = await loadConfig(tmpDir)
-    expect(config.skeleton).toBe('./spaguettiscope.skeleton.yaml')
-  })
-
   it('reads custom skeleton path from config', async () => {
     writeFileSync(
       join(tmpDir, 'spaguettiscope.config.json'),
@@ -97,5 +88,41 @@ describe('loadConfig', () => {
     )
     const config = await loadConfig(tmpDir)
     expect(config.plugins).toEqual(['@acme/plugin-foo'])
+  })
+
+  it('defaults skeleton path to .spasco/skeleton.yaml', async () => {
+    writeFileSync(
+      join(tmpDir, 'spasco.config.json'),
+      JSON.stringify({ dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.skeleton).toBe('.spasco/skeleton.yaml')
+  })
+
+  it('defaults dashboard.outputDir to .spasco/reports', async () => {
+    writeFileSync(
+      join(tmpDir, 'spasco.config.json'),
+      JSON.stringify({ dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.dashboard.outputDir).toBe('.spasco/reports')
+  })
+
+  it('defaults dashboard.historyFile to .spasco/history.jsonl', async () => {
+    writeFileSync(
+      join(tmpDir, 'spasco.config.json'),
+      JSON.stringify({ dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.dashboard.historyFile).toBe('.spasco/history.jsonl')
+  })
+
+  it('defaults analysis.intermediates to .spasco/intermediates.json', async () => {
+    writeFileSync(
+      join(tmpDir, 'spasco.config.json'),
+      JSON.stringify({ dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.analysis.intermediates).toBe('.spasco/intermediates.json')
   })
 });

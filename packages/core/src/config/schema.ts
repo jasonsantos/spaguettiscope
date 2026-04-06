@@ -1,20 +1,24 @@
-import { z } from 'zod';
+import { z } from 'zod'
 import type { InferenceRule } from '../classification/model.js'
 
-const ConnectorConfigSchema = z.object({
-  id: z.string(),
-  resultsDir: z.string().optional(),
-}).passthrough();
+const ConnectorConfigSchema = z
+  .object({
+    id: z.string(),
+    resultsDir: z.string().optional(),
+  })
+  .passthrough()
 
 const CustomDimensionSchema = z.object({
   dimension: z.string(),
   patterns: z.record(z.string(), z.array(z.string())),
-});
+})
 
-const DimensionOverridesSchema = z.object({
-  overrides: z.record(z.string(), z.record(z.string(), z.array(z.string()))).optional(),
-  custom: z.array(CustomDimensionSchema).optional(),
-}).optional();
+const DimensionOverridesSchema = z
+  .object({
+    overrides: z.record(z.string(), z.record(z.string(), z.array(z.string()))).optional(),
+    custom: z.array(CustomDimensionSchema).optional(),
+  })
+  .optional()
 
 const InferenceRuleSchema = z.object({
   glob: z.string(),
@@ -26,20 +30,32 @@ export const SpascoConfigSchema = z.object({
   plugin: z.string().optional(),
   dimensions: DimensionOverridesSchema,
   inference: z.record(z.string(), z.array(InferenceRuleSchema)).optional(),
-  skeleton: z.string().default('./spaguettiscope.skeleton.yaml'),
+  skeleton: z.string().default('.spasco/skeleton.yaml'),
   rules: z
     .object({
       disable: z.array(z.string()).default([]),
     })
     .default({ disable: [] }),
   plugins: z.array(z.string()).default([]),
-  dashboard: z.object({
-    connectors: z.array(ConnectorConfigSchema).default([]),
-    outputDir: z.string().default('./reports'),
-    historyFile: z.string().default('./reports/.spaguetti-history.jsonl'),
-  }).default({ connectors: [], outputDir: './reports', historyFile: './reports/.spaguetti-history.jsonl' }),
-});
+  analysisPlugins: z.array(z.string()).default([]),
+  dashboard: z
+    .object({
+      connectors: z.array(ConnectorConfigSchema).default([]),
+      outputDir: z.string().default('.spasco/reports'),
+      historyFile: z.string().default('.spasco/history.jsonl'),
+    })
+    .default({
+      connectors: [],
+      outputDir: '.spasco/reports',
+      historyFile: '.spasco/history.jsonl',
+    }),
+  analysis: z
+    .object({
+      intermediates: z.string().default('.spasco/intermediates.json'),
+    })
+    .default({ intermediates: '.spasco/intermediates.json' }),
+})
 
-export type SpascoConfig = z.infer<typeof SpascoConfigSchema>;
-export type ConnectorConfig = z.infer<typeof ConnectorConfigSchema>;
+export type SpascoConfig = z.infer<typeof SpascoConfigSchema>
+export type ConnectorConfig = z.infer<typeof ConnectorConfigSchema>
 export type InferenceConfig = Record<string, InferenceRule[]>
