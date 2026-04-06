@@ -1,27 +1,26 @@
 # SpaguettiScope
 
-> Framework-agnostic code entropy analyzer for modern development teams
+> Code topology and test quality dashboard for modern development teams
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D8.0.0-blue)](https://pnpm.io/)
 
-SpaguettiScope is a comprehensive code analysis tool that calculates entropy scores across six
-dimensions to help development teams understand and improve their codebase health. Unlike
-traditional static analysis tools, SpaguettiScope provides actionable insights through a beautiful
-CLI interface and extensible plugin architecture.
+SpaguettiScope helps development teams understand their codebase by classifying every file into a
+topology (layer, role, domain) using a skeleton YAML, then surfacing insights through a live HTML
+dashboard. It shows test coverage by dimension, architectural violations, and code quality findings
+— all in one place.
 
-## ✨ Features
+## Features
 
-- **🎯 Framework-Agnostic Core** - Works with any codebase through a plugin system
-- **📊 6-Dimensional Entropy Analysis** - Complexity, boundaries, redundancy, bundle size, hotspots,
-  and test coverage
-- **🎨 Beautiful CLI Interface** - Gradient colors, interactive tables, and progress indicators
-- **🔌 Plugin Architecture** - Extensible framework-specific analysis (NextJS included)
-- **📈 Multiple Output Formats** - Terminal, JSON, and HTML reports
-- **⚡ Fast Analysis** - Optimized for large codebases with intelligent caching
+- **Skeleton-based topology** — classify files by layer, role, and domain using a YAML skeleton
+- **HTML dashboard** — test quality overview, drilldown table, findings, and annotation history
+- **Rule-based analysis** — built-in and plugin-defined rules check topology for violations
+- **Annotation workflow** — flag and resolve analysis findings from the CLI
+- **Plugin architecture** — framework-specific scan and analysis rules (Next.js included)
+- **Monorepo aware** — discovers pnpm/npm workspaces automatically
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -31,249 +30,226 @@ CLI interface and extensible plugin architecture.
 ### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/your-org/spaguettiscope.git
 cd spaguettiscope
-
-# Install dependencies
 pnpm install
-
-# Build packages
 pnpm build
 ```
 
-### Basic Usage
+### Typical Workflow
 
 ```bash
-# Analyze a Next.js project
-./packages/cli/bin/spasco.js analyze /path/to/project --plugin=nextjs
+cd /path/to/your-project
 
-# Generate detailed HTML report
-./packages/cli/bin/spasco.js report /path/to/project --plugin=nextjs --output=report.html
+# 1. Scan your project to collect file topology and test records
+spasco scan
 
-# List available plugins
-./packages/cli/bin/spasco.js plugins
+# 2. Open the interactive dashboard
+spasco dashboard
 
-# Get help
-./packages/cli/bin/spasco.js --help
+# 3. Annotate findings for review
+spasco annotate list
+spasco annotate resolve <id>
+
+# 4. Run rule-based analysis (CI-friendly)
+spasco analyze
 ```
 
-## 📊 Entropy Scoring
+## CLI Commands
 
-SpaguettiScope calculates a weighted entropy score across six key dimensions:
+| Command                        | Description                                                        |
+| ------------------------------ | ------------------------------------------------------------------ |
+| `spasco scan`                  | Scan the project: collect files, build topology, read test results |
+| `spasco dashboard`             | Generate and serve the HTML dashboard (opens in browser)           |
+| `spasco analyze`               | Run analysis rules and print findings; exits non-zero on errors    |
+| `spasco check`                 | Lightweight rule check (no report generation, fast CI use)         |
+| `spasco annotate list`         | List all current analysis findings                                 |
+| `spasco annotate resolve <id>` | Mark a finding as resolved                                         |
 
-| Dimension      | Weight | Description                                |
-| -------------- | ------ | ------------------------------------------ |
-| **Complexity** | 25%    | Cyclomatic and cognitive complexity        |
-| **Boundaries** | 20%    | Architecture coupling and dependencies     |
-| **Redundancy** | 15%    | Code duplication and unused code           |
-| **Bundle**     | 15%    | Bundle size and optimization opportunities |
-| **Hotspots**   | 15%    | Maintenance burden and code churn          |
-| **Coverage**   | 10%    | Test and documentation coverage            |
+## Configuration
 
-### Score Classification
+SpaguettiScope reads `.spasco/spasco.config.json` (or `spasco.config.json`) at the project root.
 
-- **🟢 Excellent (0-3)** - Outstanding code health
-- **🟡 Good (3-5)** - Minor improvements needed
-- **🟠 Moderate (5-7)** - Some refactoring recommended
-- **🔴 Poor (7-9)** - Significant technical debt
-- **⚫ Critical (9-10)** - Immediate attention required
+| Key                      | Description                                    | Default                      |
+| ------------------------ | ---------------------------------------------- | ---------------------------- |
+| `skeleton`               | Path to the skeleton YAML                      | `.spasco/skeleton.yaml`      |
+| `analysis.intermediates` | Cache file for analysis rule intermediates     | `.spasco/intermediates.json` |
+| `dashboard.connectors`   | Array of test record connectors (e.g. allure)  | `[]`                         |
+| `analysisPlugins`        | Array of analysis plugin package IDs to load   | `[]`                         |
+| `inference`              | Engine config for test record → file inference | `{}`                         |
 
-## 🏗️ Architecture
+### Skeleton YAML
+
+The skeleton defines how files are classified into topology dimensions:
+
+```yaml
+rules:
+  - pattern: 'app/**/page.tsx'
+    dimensions:
+      layer: server
+      role: page
+      domain: '{{1}}' # capture group from glob pattern
+  - pattern: 'components/**/*.tsx'
+    dimensions:
+      layer: client-component
+```
+
+## Architecture
 
 ```
 spaguettiscope/
 ├── packages/
-│   ├── core/           # Framework-agnostic analysis engine
-│   └── cli/            # Command-line interface
+│   ├── core/       # Analysis engine: rules, topology, import graph, inference
+│   ├── cli/        # spasco CLI commands
+│   └── reports/    # HTML dashboard renderer and data writers
 ├── plugins/
-│   └── nextjs/         # Next.js framework plugin
-├── apps/
-│   └── docs/           # Documentation website
-└── examples/           # Example projects and configurations
+│   └── nextjs/     # Next.js scan plugin + analysis plugin
+└── apps/
+    └── docs/       # Documentation site (Vite + React)
 ```
 
-## 🔌 Plugins
+### Packages
 
-### Available Plugins
+**`@spaguettiscope/core`** — Framework-agnostic engine:
 
-- **NextJS** - Comprehensive Next.js analysis with App Router and Pages Router support
+- Skeleton YAML loading and file matching (`matchFile`, `readSkeleton`)
+- Import graph construction (`buildImportGraph`, `mergeImportGraphs`)
+- Analysis rule runner (`runAnalysis`, `builtInAnalysisRules`)
+- Test record inference engine (`InferenceEngine`)
+- Intermediate result cache (`loadIntermediateCache`, `saveIntermediateCache`)
 
-### Creating Custom Plugins
+**`@spaguettiscope/cli`** — CLI entrypoint (`spasco`):
 
-```javascript
-import { AnalyzerPlugin } from '@spaguettiscope/core'
+- Commands: `scan`, `dashboard`, `analyze`, `check`, `annotate`
+- Workspace discovery (`discoverWorkspaces`)
+- File walker (`walkFiles`)
 
-export class MyFrameworkPlugin extends AnalyzerPlugin {
-  constructor() {
-    super('my-framework')
-  }
+**`@spaguettiscope/reports`** — Dashboard generation:
 
-  async canAnalyze(projectPath) {
-    // Plugin detection logic
-    return existsSync(join(projectPath, 'my-framework.config.js'))
-  }
+- Writes `summary.json`, `records.json`, `findings.json` to `data/`
+- Bundles a Vite+React SPA with tabs: Overview, Drilldown, Findings, History
 
-  async discover(projectPath, options) {
-    // Framework-specific discovery
-    return {
-      files: [],
-      routes: [],
-      components: [],
-      metadata: { framework: 'my-framework' },
-    }
-  }
+## Plugin System
 
-  getFilePatterns() {
-    return ['**/*.{js,jsx,ts,tsx}']
-  }
+### ScanPlugin
 
-  getIgnorePatterns() {
-    return ['node_modules/**', 'dist/**']
-  }
+Detects whether the plugin applies to a project root and returns scan rules (dimension emitters):
+
+```typescript
+import type { ScanPlugin } from '@spaguettiscope/core'
+
+export const myPlugin: ScanPlugin = {
+  id: 'my-plugin',
+  canApply(root: string): boolean {
+    return existsSync(join(root, 'my.config.js'))
+  },
+  rules() {
+    return [
+      /* ScanRule[] */
+    ]
+  },
 }
 ```
 
-## 🛠️ Development
+### AnalysisPlugin
 
-### Prerequisites
+Returns `AnalysisRule[]` that run over files, edges (import graph), or test records:
 
-- Node.js 18+ with pnpm
-- Git
+```typescript
+import type { AnalysisPlugin, AnalysisRule, Finding, EdgeItem } from '@spaguettiscope/core'
 
-### Setup
+const myRule: AnalysisRule<'edges'> = {
+  id: 'my:rule-id',
+  severity: 'error',
+  needs: [],
+  corpus: 'edges',
+  run(item: EdgeItem, _ctx): Finding[] {
+    if (item.from.dimensions.layer !== 'client-component') return []
+    if (item.to.dimensions.layer !== 'bff') return []
+    return [
+      {
+        ruleId: 'my:rule-id',
+        kind: 'violation',
+        severity: 'error',
+        subject: { type: 'edge', from: item.from.file, to: item.to.file },
+        dimensions: item.from.dimensions,
+        message: 'Client cannot import BFF modules directly',
+      },
+    ]
+  },
+}
+
+export const myAnalysisPlugin: AnalysisPlugin = {
+  id: 'my-analysis',
+  canApply,
+  rules: () => [myRule],
+}
+```
+
+Register analysis plugins in `spasco.config.json`:
+
+```json
+{
+  "analysisPlugins": ["@spaguettiscope/plugin-nextjs/analysis"]
+}
+```
+
+### Built-in Analysis Rules
+
+| Rule ID                     | Corpus | Severity | Description                                |
+| --------------------------- | ------ | -------- | ------------------------------------------ |
+| `no-untested-file`          | files  | warning  | Files with no associated test records      |
+| `missing-domain-annotation` | files  | info     | Files in a domain layer with no domain set |
+
+### Next.js Analysis Rules (`@spaguettiscope/plugin-nextjs/analysis`)
+
+| Rule ID                           | Corpus | Severity | Description                                    |
+| --------------------------------- | ------ | -------- | ---------------------------------------------- |
+| `nextjs:no-client-imports-server` | edges  | error    | Client component imports a server-action       |
+| `nextjs:bff-layer-boundary`       | edges  | error    | Client component imports a BFF (route handler) |
+| `nextjs:no-cross-domain-page`     | edges  | warning  | Page imports a page from a different domain    |
+
+## Development
 
 ```bash
-# Clone and install
-git clone https://github.com/your-org/spaguettiscope.git
-cd spaguettiscope
+# Install dependencies
 pnpm install
-
-# Start development
-pnpm dev
-
-# Run tests
-pnpm test
-
-# Lint code
-pnpm lint
 
 # Build all packages
 pnpm build
-```
 
-### Project Structure
-
-- **`packages/core/`** - Core analysis engine
-- **`packages/cli/`** - Command-line interface
-- **`plugins/nextjs/`** - Next.js plugin
-- **`apps/docs/`** - Documentation site
-
-### Testing
-
-```bash
 # Run all tests
 pnpm test
 
-# Test specific package
+# Run tests for a specific package
 cd packages/core && pnpm test
 
-# Test with coverage
-pnpm test:coverage
+# Lint
+pnpm lint
+
+# Format
+pnpm format
 ```
 
-## 📈 Usage Examples
+### `.spasco/` Directory
 
-### Analyzing a Next.js Project
-
-```bash
-# Basic analysis
-spasco analyze ./my-nextjs-app --plugin=nextjs
-
-# Verbose output with detailed metrics
-spasco analyze ./my-nextjs-app --plugin=nextjs --verbose
-
-# Generate HTML report
-spasco report ./my-nextjs-app --plugin=nextjs --output=analysis.html
-```
-
-### Sample Output
+SpaguettiScope stores all generated artifacts under `.spasco/` by default:
 
 ```
-📊 Project Overview:
-
-Files           42
-Lines of Code   2,847
-Components      12
-Routes          8
-
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│   ENTROPY SCORE                                         │
-│                                                         │
-│   2.3/10.0                                             │
-│   GOOD                                                  │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
-
-🎯 Recommendations:
-
-1. ⚡ HIGH Reduce complexity in ProductList component
-   Cyclomatic complexity of 18 detected. Consider breaking into smaller functions.
-   → maintainability
-
-2. 🔧 MED Improve test coverage
-   Only 65% of components have associated tests.
-   → reliability
+.spasco/
+├── skeleton.yaml          # topology classification rules
+├── spasco.config.json     # project configuration
+├── intermediates.json     # analysis rule cache
+└── reports/               # generated dashboard HTML + data
+    ├── index.html
+    └── data/
+        ├── summary.json
+        ├── records.json
+        └── findings.json
 ```
 
-## 🤝 Contributing
+Add `.spasco/reports/` to `.gitignore`. Commit `skeleton.yaml` and `spasco.config.json`.
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+## License
 
-### Ways to Contribute
-
-- 🐛 **Bug Reports** - Report issues via GitHub Issues
-- 💡 **Feature Requests** - Suggest new features or improvements
-- 🔌 **New Plugins** - Add support for additional frameworks
-- 📚 **Documentation** - Improve docs and examples
-- 🧪 **Testing** - Add test cases and improve coverage
-
-### Development Workflow
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass (`pnpm test`)
-6. Commit with conventional commits (`git commit -m 'feat: add amazing feature'`)
-7. Push to your branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Built with [TypeScript](https://www.typescriptlang.org/) and [Node.js](https://nodejs.org/)
-- CLI powered by [Commander.js](https://github.com/tj/commander.js/)
-- Beautiful terminal output with [Chalk](https://github.com/chalk/chalk) and
-  [Ora](https://github.com/sindresorhus/ora)
-- Code parsing with [@typescript-eslint/parser](https://typescript-eslint.io/)
-- Monorepo managed with [Turborepo](https://turbo.build/) and [pnpm](https://pnpm.io/)
-
-## 🔗 Links
-
-- [Documentation](https://spaguettiscope.dev)
-- [Plugin Development Guide](docs/plugins.md)
-- [API Reference](docs/api.md)
-- [Examples](examples/)
-
----
-
-<div align="center">
-
-**[SpaguettiScope](https://spaguettiscope.dev)** - Untangle your code, one analysis at a time.
-
-</div>
+MIT — see [LICENSE](LICENSE) for details.
