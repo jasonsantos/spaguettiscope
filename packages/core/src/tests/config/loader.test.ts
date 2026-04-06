@@ -134,4 +134,43 @@ describe('loadConfig', () => {
     const config = await loadConfig(tmpDir)
     expect(config.analysisPlugins).toEqual([])
   })
+
+  it('loads spasco.config.json when present', async () => {
+    writeFileSync(
+      join(tmpDir, 'spasco.config.json'),
+      JSON.stringify({ name: 'new-name', dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.name).toBe('new-name')
+  })
+
+  it('falls back to spaguettiscope.config.json when spasco.config.json absent', async () => {
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ name: 'old-name', dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.name).toBe('old-name')
+  })
+
+  it('prefers spasco.config.json over spaguettiscope.config.json when both exist', async () => {
+    writeFileSync(
+      join(tmpDir, 'spasco.config.json'),
+      JSON.stringify({ name: 'new-name', dashboard: { connectors: [] } })
+    )
+    writeFileSync(
+      join(tmpDir, 'spaguettiscope.config.json'),
+      JSON.stringify({ name: 'old-name', dashboard: { connectors: [] } })
+    )
+    const config = await loadConfig(tmpDir)
+    expect(config.name).toBe('new-name')
+  })
+
+  it('throws a descriptive error for an invalid spasco.config.json', async () => {
+    writeFileSync(
+      join(tmpDir, 'spasco.config.json'),
+      JSON.stringify({ dashboard: { connectors: 'not-an-array' } })
+    )
+    await expect(loadConfig(tmpDir)).rejects.toThrow('spasco.config.json')
+  })
 });

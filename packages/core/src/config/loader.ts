@@ -1,28 +1,28 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { SpascoConfigSchema, type SpascoConfig } from './schema.js';
+import { readFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { SpascoConfigSchema, type SpascoConfig } from './schema.js'
 
-const CONFIG_FILENAME = 'spaguettiscope.config.json';
+const CONFIG_FILENAMES = ['spasco.config.json', 'spaguettiscope.config.json'] as const
 
 export async function loadConfig(projectRoot: string): Promise<SpascoConfig> {
-  const configPath = join(projectRoot, CONFIG_FILENAME);
-
-  if (!existsSync(configPath)) {
-    return SpascoConfigSchema.parse({});
+  const filename = CONFIG_FILENAMES.find(f => existsSync(join(projectRoot, f)))
+  if (!filename) {
+    return SpascoConfigSchema.parse({})
   }
 
-  let raw: unknown;
+  const configPath = join(projectRoot, filename)
+  let raw: unknown
   try {
-    raw = JSON.parse(readFileSync(configPath, 'utf-8'));
+    raw = JSON.parse(readFileSync(configPath, 'utf-8'))
   } catch {
-    throw new Error(`Failed to parse ${CONFIG_FILENAME}: invalid JSON`);
+    throw new Error(`Failed to parse ${filename}: invalid JSON`)
   }
 
-  const result = SpascoConfigSchema.safeParse(raw);
+  const result = SpascoConfigSchema.safeParse(raw)
   if (!result.success) {
-    const issues = result.error.issues.map(i => `  ${i.path.join('.')}: ${i.message}`).join('\n');
-    throw new Error(`Invalid ${CONFIG_FILENAME}:\n${issues}`);
+    const issues = result.error.issues.map(i => `  ${i.path.join('.')}: ${i.message}`).join('\n')
+    throw new Error(`Invalid ${filename}:\n${issues}`)
   }
 
-  return result.data;
+  return result.data
 }
