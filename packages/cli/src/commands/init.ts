@@ -1,0 +1,118 @@
+import { writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { createInterface } from 'node:readline/promises'
+import {
+  discoverWorkspaces,
+  builtInDetectors,
+  type InitDetector,
+  type DetectedConnector,
+} from '@spaguettiscope/core'
+import { printWarning, printSuccess } from '../formatter/index.js'
+
+export interface InitOptions {
+  interactive?: boolean
+  plugins?: string // comma-separated module IDs
+  projectRoot?: string
+}
+
+export async function runInit(options: InitOptions = {}): Promise<void> {
+  const projectRoot = options.projectRoot ?? process.cwd()
+
+  // Guard: refuse if config already exists
+  if (
+    existsSync(join(projectRoot, 'spasco.config.json')) ||
+    existsSync(join(projectRoot, 'spaguettiscope.config.json'))
+  ) {
+    throw new Error('spasco.config.json already exists. Remove it first to re-initialize.')
+  }
+
+  // Resolve project name from root package.json
+  let projectName: string | undefined
+  try {
+    const rootPkg = JSON.parse(
+      readFileSync(join(projectRoot, 'package.json'), 'utf-8')
+    ) as Record<string, unknown>
+    if (typeof rootPkg.name === 'string') projectName = rootPkg.name
+  } catch {
+    // no root package.json — fine
+  }
+
+  // Discover workspaces
+  const packages = discoverWorkspaces(projectRoot)
+
+  // Collect all detectors
+  const allDetectors: InitDetector[] = [...builtInDetectors]
+  if (options.plugins) {
+    for (const pluginId of options.plugins.split(',').map(s => s.trim()).filter(Boolean)) {
+      try {
+        const mod = (await import(pluginId)) as Record<string, unknown>
+        const det = mod.detector
+        if (det && typeof (det as InitDetector).detect === 'function') {
+          allDetectors.push(det as InitDetector)
+        }
+      } catch {
+        printWarning(`Failed to load plugin detector: ${pluginId}`)
+      }
+    }
+  }
+
+  // Run detectors across all workspaces
+  let detected: DetectedConnector[] = []
+  for (const pkg of packages) {
+    for (const detector of allDetectors) {
+      try {
+        const results = detector.detect(pkg.root, projectRoot)
+        detected.push(...results)
+      } catch {
+        // detector error — skip silently
+      }
+    }
+  }
+
+  // Interactive confirmation
+  if (options.interactive && process.stdout.isTTY) {
+    detected = await promptConfirmConnectors(detected)
+    projectName = await promptProjectName(projectName)
+  }
+
+  // Build config
+  const config: Record<string, unknown> = {
+    ...(projectName !== undefined ? { name: projectName } : {}),
+    dashboard: { connectors: detected.map(d => d.config) },
+  }
+
+  // Write
+  const configPath = join(projectRoot, 'spasco.config.json')
+  writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8')
+
+  if (detected.length === 0) {
+    printWarning('No connectors detected. Edit spasco.config.json to add them manually.')
+  } else {
+    printSuccess(
+      `Detected ${detected.length} connector(s):\n` +
+        detected.map(d => `  • ${d.source}`).join('\n')
+    )
+  }
+  printSuccess(`Config written → ${configPath}\nRun: spasco dashboard`)
+}
+
+async function promptProjectName(current: string | undefined): Promise<string | undefined> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  const answer = await rl.question(`Project name [${current ?? ''}]: `)
+  rl.close()
+  return answer.trim() || current
+}
+
+async function promptConfirmConnectors(
+  detected: DetectedConnector[]
+): Promise<DetectedConnector[]> {
+  if (detected.length === 0) return []
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  const kept: DetectedConnector[] = []
+  for (const d of detected) {
+    const answer = await rl.question(`Include ${d.source}? [Y/n] `)
+    if (answer.trim().toLowerCase() !== 'n') kept.push(d)
+  }
+  rl.close()
+  return kept
+}

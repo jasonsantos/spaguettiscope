@@ -3,6 +3,7 @@ import { runDashboard } from './commands/dashboard.js';
 import { runScan } from './commands/scan.js';
 import { runAnnotateList, runAnnotateResolve } from './commands/annotate.js';
 import { runAnalyzeCommand } from './commands/analyze.js';
+import { runInit } from './commands/init.js';
 
 const program = new Command();
 
@@ -109,6 +110,20 @@ program
             ? summary.error + summary.warning > 0
             : summary.error > 0
       if (hasErrors) process.exit(1)
+    } catch (err) {
+      console.error((err as Error).message)
+      process.exit(1)
+    }
+  })
+
+program
+  .command('init')
+  .description('Auto-detect CI tools and generate spasco.config.json')
+  .option('--interactive', 'Prompt to confirm each detected connector')
+  .option('--plugins <ids>', 'Comma-separated plugin module IDs to load detectors from')
+  .action(async (options: { interactive?: boolean; plugins?: string }) => {
+    try {
+      await runInit({ interactive: options.interactive, plugins: options.plugins })
     } catch (err) {
       console.error((err as Error).message)
       process.exit(1)
