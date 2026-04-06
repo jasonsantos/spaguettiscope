@@ -57,15 +57,15 @@ spasco analyze
 
 ## CLI Commands
 
-| Command                        | Description                                                        |
-| ------------------------------ | ------------------------------------------------------------------ |
-| `spasco init`                  | Auto-detect tools and write `spasco.config.json`                   |
-| `spasco scan`                  | Scan the project: collect files, build topology, read test results |
-| `spasco dashboard`             | Generate and serve the HTML dashboard (opens in browser)           |
-| `spasco analyze`               | Run analysis rules and print findings; exits non-zero on errors    |
-| `spasco check`                 | Lightweight rule check (no report generation, fast CI use)         |
-| `spasco annotate list`         | List all current analysis findings                                 |
-| `spasco annotate resolve <id>` | Mark a finding as resolved                                         |
+| Command                        | Description                                                                                                                                                                                        |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spasco init`                  | Auto-detect tools, write `spasco.config.json`. Use `--interactive` to confirm each connector, `--plugins <ids>` to run detectors from plugins (comma-separated). Refuses if config already exists. |
+| `spasco scan`                  | Scan the project: collect files, build topology, read test results                                                                                                                                 |
+| `spasco dashboard`             | Generate and serve the HTML dashboard (opens in browser)                                                                                                                                           |
+| `spasco analyze`               | Run analysis rules and print findings; exits non-zero on errors                                                                                                                                    |
+| `spasco check`                 | Lightweight rule check (no report generation, fast CI use)                                                                                                                                         |
+| `spasco annotate list`         | List all current analysis findings                                                                                                                                                                 |
+| `spasco annotate resolve <id>` | Mark a finding as resolved                                                                                                                                                                         |
 
 ## Configuration
 

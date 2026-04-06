@@ -119,9 +119,9 @@ Auto-detects installed tools (vitest, lcov, playwright, allure, eslint, typescri
 repository and writes a ready-to-use `spasco.config.json`. Refuses if a config already exists.
 
 ```bash
-spasco init                          # auto-detect, write config
-spasco init --interactive            # confirm each detected connector
-spasco init --plugins @my/plugin     # also run detectors from a plugin
+spasco init                                              # auto-detect, write config
+spasco init --interactive                               # confirm each detected connector
+spasco init --plugins @my/plugin,@other/plugin          # also run detectors from plugins
 ```
 
 ### `spasco analyze`
