@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./analysis": "./dist/analysis.js"
   },
   "files": [
     "dist/**"
