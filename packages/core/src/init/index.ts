@@ -1,4 +1,4 @@
-export type { InitDetector, DetectedConnector } from './interface.js'
+export type { InitDetector, DetectedConnector, PluginDetector } from './interface.js'
 export { vitestDetector } from './detectors/vitest.js'
 export { lcovDetector } from './detectors/lcov.js'
 export { playwrightDetector } from './detectors/playwright.js'

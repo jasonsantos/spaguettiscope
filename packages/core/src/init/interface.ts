@@ -10,3 +10,8 @@ export interface InitDetector {
   readonly connectorId: string
   detect(packageRoot: string, projectRoot: string): DetectedConnector[]
 }
+
+export interface PluginDetector {
+  readonly id: string
+  detect(packageRoot: string, projectRoot: string): boolean
+}

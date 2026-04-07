@@ -6,6 +6,7 @@ import {
   builtInDetectors,
   type InitDetector,
   type DetectedConnector,
+  type PluginDetector,
 } from '@spaguettiscope/core'
 import { printWarning, printSuccess } from '../formatter/index.js'
 
@@ -69,6 +70,59 @@ export async function runInit(options: InitOptions = {}): Promise<void> {
     }
   }
 
+  // Discover plugins from workspace packages matching @spaguettiscope/plugin-* or plugin-*
+  const detectedPlugins: Array<{ id: string; source: string }> = []
+  const pluginDetectors: Array<{ name: string; detector: PluginDetector }> = []
+
+  for (const pkg of packages) {
+    const pkgName = pkg.packageJson.name as string | undefined
+    if (!pkgName) continue
+    const segment = pkgName.includes('/') ? pkgName.split('/').pop()! : pkgName
+    if (!segment.startsWith('plugin-')) continue
+
+    try {
+      const mod = (await import(pkgName)) as Record<string, unknown>
+      const det = mod.detector as PluginDetector | undefined
+      if (det && typeof det.detect === 'function') {
+        pluginDetectors.push({ name: pkgName, detector: det })
+      }
+    } catch {
+      // Plugin not loadable — skip
+    }
+  }
+
+  // Also load plugin detectors from --plugins flag if provided
+  if (options.plugins) {
+    for (const pluginId of options.plugins.split(',').map(s => s.trim()).filter(Boolean)) {
+      // Only add to pluginDetectors if not already loaded as InitDetector above
+      try {
+        const mod = (await import(pluginId)) as Record<string, unknown>
+        const det = mod.detector as PluginDetector | undefined
+        if (det && typeof det.detect === 'function' && !pluginDetectors.some(p => p.name === pluginId)) {
+          pluginDetectors.push({ name: pluginId, detector: det })
+        }
+      } catch {
+        // Not a PluginDetector — already handled above as InitDetector
+      }
+    }
+  }
+
+  // Run plugin detectors against all workspace packages
+  for (const { name, detector } of pluginDetectors) {
+    for (const pkg of packages) {
+      if (detector.detect(pkg.root, projectRoot)) {
+        detectedPlugins.push({
+          id: name,
+          source: `detected ${detector.id} in ${(pkg.packageJson.name as string | undefined) ?? pkg.rel}`,
+        })
+        break // One match is enough
+      }
+    }
+  }
+
+  // Deduplicate plugins
+  const uniquePlugins = [...new Map(detectedPlugins.map(p => [p.id, p])).values()]
+
   // Interactive confirmation
   if (options.interactive && process.stdout.isTTY) {
     const rl = createInterface({ input: process.stdin, output: process.stdout })
@@ -80,6 +134,7 @@ export async function runInit(options: InitOptions = {}): Promise<void> {
   // Build config
   const config: Record<string, unknown> = {
     ...(projectName !== undefined ? { name: projectName } : {}),
+    ...(uniquePlugins.length > 0 ? { plugins: uniquePlugins.map(p => p.id) } : {}),
     dashboard: { connectors: detected.map(d => d.config) },
   }
 
