@@ -69,4 +69,57 @@ describe('skeleton IO', () => {
     writeFileSync(path, 'not: valid: yaml: content:\n  broken: [unclosed')
     expect(() => readSkeleton(path)).toThrow(/Failed to parse skeleton file/)
   })
+
+  describe('layerPolicy IO', () => {
+    it('round-trips layerPolicy through write and read', () => {
+      const path = join(dir, 'skeleton-lp.yaml')
+      const skeleton: SkeletonFile = {
+        entries: [{ attributes: { role: 'test' }, paths: ['src/**/*.test.ts'] }],
+        layerPolicy: {
+          'packages/core': [
+            { from: 'rules', to: 'graph', kind: 'concrete' as const },
+            { from: 'analysis', to: 'graph', kind: 'typeOnly' as const },
+          ],
+        },
+        layerPolicyDraft: true,
+      }
+
+      writeSkeleton(path, skeleton)
+      const loaded = readSkeleton(path)
+
+      expect(loaded.layerPolicy).toEqual(skeleton.layerPolicy)
+      expect(loaded.layerPolicyDraft).toBe(true)
+    })
+
+    it('reads skeleton without layerPolicy (backwards compat)', () => {
+      const path = join(dir, 'skeleton-legacy.yaml')
+      writeFileSync(path, '- attributes:\n    role: test\n  paths:\n    - "src/**"\n')
+      const loaded = readSkeleton(path)
+
+      expect(loaded.entries).toHaveLength(1)
+      expect(loaded.layerPolicy).toBeUndefined()
+      expect(loaded.layerPolicyDraft).toBeUndefined()
+    })
+
+    it('round-trips layerPolicy without draft flag', () => {
+      const path = join(dir, 'skeleton-lp2.yaml')
+      const skeleton: SkeletonFile = {
+        entries: [],
+        layerPolicy: {
+          'packages/reports': [
+            { from: 'renderer', to: 'model', kind: 'concrete' as const },
+            { from: 'connectors', to: 'renderer', kind: 'typeOnly' as const },
+          ],
+        },
+      }
+
+      writeSkeleton(path, skeleton)
+      const loaded = readSkeleton(path)
+
+      expect(loaded.layerPolicy!['packages/reports']).toEqual(
+        skeleton.layerPolicy!['packages/reports']
+      )
+      expect(loaded.layerPolicyDraft).toBeUndefined()
+    })
+  })
 })

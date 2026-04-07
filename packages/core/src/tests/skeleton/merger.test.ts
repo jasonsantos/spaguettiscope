@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mergeSkeleton } from '../../skeleton/merger.js'
+import { isPending } from '../../skeleton/types.js'
 import type { SkeletonFile } from '../../skeleton/types.js'
 
 describe('mergeSkeleton', () => {
@@ -58,6 +59,37 @@ describe('mergeSkeleton', () => {
     expect(entry.draft).toBe(true)
     expect(entry.attributes['?']).toBe('auth')
     expect(entry.source).toBe('test-rule')
+  })
+
+  it('marks candidates with key? attributes as draft', () => {
+    const { skeleton } = mergeSkeleton(
+      { entries: [] },
+      [{ attributes: { 'layer?': 'renderer' }, paths: ['src/renderer/**'], source: 'heuristic' }],
+      ['src/renderer/index.ts']
+    )
+    const entry = skeleton.entries[0] as any
+    expect(entry.draft).toBe(true)
+    expect(entry.attributes['layer?']).toBe('renderer')
+    expect(entry.source).toBe('heuristic')
+  })
+
+  it('marks concrete attributes (no ?) as non-draft', () => {
+    const { skeleton } = mergeSkeleton(
+      { entries: [] },
+      [{ attributes: { domain: 'plugin:nextjs' }, paths: ['plugins/nextjs/**'] }],
+      ['plugins/nextjs/src/index.ts']
+    )
+    const entry = skeleton.entries[0] as any
+    expect(entry.draft).toBeUndefined()
+  })
+
+  it('isPending returns true for key? entries', () => {
+    const { skeleton } = mergeSkeleton(
+      { entries: [] },
+      [{ attributes: { 'domain?': 'core' }, paths: ['packages/core/**'], source: 'workspace' }],
+      ['packages/core/src/index.ts']
+    )
+    expect(isPending(skeleton.entries[0])).toBe(true)
   })
 
   it('preserves existing annotated entry and does not mark stale if files exist', () => {

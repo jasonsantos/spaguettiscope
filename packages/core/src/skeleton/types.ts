@@ -13,8 +13,16 @@ export interface DraftEntry {
 
 export type SkeletonFileEntry = SkeletonEntry | DraftEntry
 
+export interface LayerPolicyEdge {
+  from: string
+  to: string
+  kind: 'concrete' | 'typeOnly'
+}
+
 export interface SkeletonFile {
   entries: SkeletonFileEntry[]
+  layerPolicy?: Record<string, LayerPolicyEdge[]>
+  layerPolicyDraft?: boolean
 }
 
 export function isDraft(entry: SkeletonFileEntry): entry is DraftEntry {
@@ -26,5 +34,5 @@ export function isStale(entry: SkeletonFileEntry): boolean {
 }
 
 export function isPending(entry: SkeletonFileEntry): boolean {
-  return isDraft(entry) && '?' in entry.attributes
+  return isDraft(entry) && Object.keys(entry.attributes).some(k => k.endsWith('?'))
 }

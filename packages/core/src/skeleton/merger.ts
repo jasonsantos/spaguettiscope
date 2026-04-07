@@ -59,7 +59,7 @@ export function mergeSkeleton(
       unchanged++
       continue
     }
-    const isUncertain = '?' in candidate.attributes
+    const isUncertain = Object.keys(candidate.attributes).some(k => k.endsWith('?'))
     const newEntry: SkeletonFileEntry = isUncertain
       ? { attributes: candidate.attributes, paths: candidate.paths, draft: true, source: candidate.source } as DraftEntry
       : { attributes: candidate.attributes, paths: candidate.paths }
