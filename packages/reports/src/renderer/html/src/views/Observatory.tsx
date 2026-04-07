@@ -1,98 +1,15 @@
 // Observatory.tsx — project-wide overview: package map, connectors, trend, dimension widgets.
-import React, { useState } from 'react';
-import { LineChart, Line, Area, AreaChart, Tooltip, ResponsiveContainer } from 'recharts';
-import { C, fmt, hue, covColor, totalF, StatusBar, PackageIcon } from '../shared.tsx';
+import React, { useState, useId } from 'react';
+import { Area, AreaChart, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  C, alpha, fmt, hue, StatusBar, PackageIcon,
+  passRateHealth, coverageHealth, findingsHealth, neutralHealth,
+  type HealthInfo,
+} from '../shared.tsx';
 import type { PackageInfo, FindingsCount, RawSummary } from '../derive.ts';
+import { deriveTestingOverall } from '../derive.ts';
 
-// ─── Status system ────────────────────────────────────────────────────────────
-type HealthStatus = 'ok' | 'warn' | 'error' | 'neutral';
-
-const S = {
-  ok:      { accent: C.passed,  glow: C.passed,  text: C.passed,  bg: C.passedBg,  chip: '✓ Healthy'  },
-  warn:    { accent: C.warning, glow: C.warning, text: C.warning, bg: C.warningBg, chip: '⚠ Warning'  },
-  error:   { accent: C.failed,  glow: C.failed,  text: C.failed,  bg: C.failedBg,  chip: '✕ Issues'   },
-  neutral: { accent: C.border,  glow: C.border,  text: C.text,    bg: 'transparent', chip: ''          },
-} as const;
-
-function passRateStatus(r: number): HealthStatus {
-  if (r >= 1.0)  return 'ok';
-  if (r >= 0.90) return 'warn';
-  return 'error';
-}
-function coverageStatus(c: number): HealthStatus {
-  if (c >= 0.80) return 'ok';
-  if (c >= 0.60) return 'warn';
-  return 'error';
-}
-function findingsStatus(f: FindingsCount): HealthStatus {
-  if (f.error > 0)   return 'error';
-  if (f.warning > 0) return 'warn';
-  return 'ok';
-}
-
-// ─── Metric card ─────────────────────────────────────────────────────────────
-function MetricCard({
-  label, value, sub, status, bar,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  status: HealthStatus;
-  bar?: { passed: number; failed: number; broken: number; skipped: number; total: number };
-}) {
-  const st = S[status];
-  return (
-    <div style={{
-      background: C.surface,
-      borderRadius: 12,
-      border: `1px solid ${C.border}`,
-      borderLeft: `4px solid ${st.accent}`,
-      padding: '20px 20px 20px 18px',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      {/* Corner glow */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, width: '60%', height: '100%',
-        background: `linear-gradient(135deg, ${st.glow}12 0%, transparent 70%)`,
-        pointerEvents: 'none',
-      }} />
-
-      {/* Label + status chip */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
-          {label}
-        </div>
-        {st.chip && (
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
-            background: st.bg, color: st.text,
-            border: `1px solid ${st.accent}44`,
-            letterSpacing: '0.03em',
-          }}>{st.chip}</span>
-        )}
-      </div>
-
-      {/* Value */}
-      <div style={{
-        fontSize: 32, fontWeight: 800, color: st.text,
-        letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 6,
-      }}>{value}</div>
-
-      {/* Sub */}
-      <div style={{ fontSize: 12, color: C.muted }}>{sub}</div>
-
-      {/* Optional status bar */}
-      {bar && bar.total > 0 && (
-        <div style={{ marginTop: 14 }}>
-          <StatusBar {...bar} height={4} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Package map tiles ────────────────────────────────────────────────────────
+// ─── Connector metadata ───────────────────────────────────────────────────────
 const HIDDEN_FROM_DIM_PANELS = new Set(['package']);
 
 const CONNECTOR_LABELS: Record<string, string> = {
@@ -116,6 +33,92 @@ const CONNECTOR_CATEGORY_COLOR: Record<string, string> = {
   lint:     C.info,
 };
 
+// ─── Metric card ─────────────────────────────────────────────────────────────
+function MetricCard({
+  label, value, sub, health, bar, onClick,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  health: HealthInfo;
+  bar?: { passed: number; failed: number; broken: number; skipped: number; total: number };
+  onClick?: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const isInteractive = Boolean(onClick);
+
+  return (
+    <div
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={isInteractive ? e => (e.key === 'Enter' || e.key === ' ') && onClick?.() : undefined}
+      onMouseEnter={isInteractive ? () => setHovered(true) : undefined}
+      onMouseLeave={isInteractive ? () => setHovered(false) : undefined}
+      style={{
+        background: hovered ? C.surfaceHigh : C.surface,
+        borderRadius: 12,
+        border: `1px solid ${hovered ? alpha(health.accent, 40) : C.border}`,
+        borderLeft: `4px solid ${health.accent}`,
+        padding: '20px 20px 20px 18px',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: isInteractive ? 'pointer' : 'default',
+        transition: 'background 0.15s, border-color 0.15s',
+        outline: 'none',
+      }}
+    >
+      {/* Corner glow */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, width: '60%', height: '100%',
+        background: `linear-gradient(135deg, ${alpha(health.accent, 7)} 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+
+      {/* Label + status chip */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
+          {label}
+        </div>
+        {health.chip && (
+          <span style={{
+            fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+            background: health.bg, color: health.accent,
+            border: `1px solid ${alpha(health.accent, 27)}`,
+            letterSpacing: '0.03em',
+          }}>{health.chip}</span>
+        )}
+      </div>
+
+      {/* Value */}
+      <div style={{
+        fontSize: 32, fontWeight: 800, color: health.text,
+        letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 6,
+      }}>{value}</div>
+
+      {/* Sub */}
+      <div style={{ fontSize: 12, color: C.muted }}>{sub}</div>
+
+      {/* Optional status bar */}
+      {bar && bar.total > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <StatusBar {...bar} height={4} />
+        </div>
+      )}
+
+      {/* Interactive hint */}
+      {isInteractive && (
+        <div style={{
+          position: 'absolute', bottom: 10, right: 12,
+          fontSize: 11, color: C.dim, opacity: hovered ? 1 : 0,
+          transition: 'opacity 0.15s',
+        }}>view all ›</div>
+      )}
+    </div>
+  );
+}
+
+// ─── Package map tiles ────────────────────────────────────────────────────────
 interface PackageMapProps {
   packages: PackageInfo[];
   onSelect: (name: string) => void;
@@ -131,8 +134,8 @@ function PackageMap({ packages, onSelect }: PackageMapProps) {
       gap: 8,
     }}>
       {packages.map(p => {
-        const st   = S[passRateStatus(p.passRate)];
-        const isH  = hovered === p.name;
+        const health = p.passRate !== null ? passRateHealth(p.passRate) : neutralHealth;
+        const isH    = hovered === p.name;
         const shortName = p.name.split('/').pop() ?? p.name;
 
         return (
@@ -140,28 +143,28 @@ function PackageMap({ packages, onSelect }: PackageMapProps) {
             key={p.name}
             role="button"
             tabIndex={0}
-            aria-label={`${p.name}: ${fmt(p.passRate)} pass rate, ${fmt(p.coverage)} coverage. Click to drill in.`}
+            aria-label={`${p.name}: ${p.passRate !== null ? fmt(p.passRate) : 'no tests'} pass rate, ${fmt(p.coverage)} coverage. Click to drill in.`}
             onClick={() => onSelect(p.name)}
             onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onSelect(p.name)}
             onMouseEnter={() => setHovered(p.name)}
             onMouseLeave={() => setHovered(null)}
             style={{
               borderRadius: 10,
-              background: isH ? C.surfaceHigh : st.bg,
-              border: `1px solid ${isH ? st.accent : st.accent + '55'}`,
-              borderTop: `3px solid ${st.accent}`,
+              background: isH ? C.surfaceHigh : health.bg,
+              border: `1px solid ${isH ? health.accent : alpha(health.accent, 33)}`,
+              borderTop: `3px solid ${health.accent}`,
               padding: '14px 14px 12px',
               cursor: 'pointer',
               display: 'flex', flexDirection: 'column', gap: 5,
               transition: 'all 0.15s', outline: 'none',
-              boxShadow: isH ? `0 4px 24px ${st.accent}22, 0 0 0 1px ${st.accent}33` : 'none',
+              boxShadow: isH ? `0 4px 24px ${alpha(health.accent, 13)}, 0 0 0 1px ${alpha(health.accent, 20)}` : 'none',
               position: 'relative', overflow: 'hidden',
             }}
           >
-            {/* Package type watermark — bleeds off top-right, tinted to health border */}
+            {/* Package type watermark */}
             <div style={{
               position: 'absolute', right: -10, top: -10,
-              color: st.accent,
+              color: health.accent,
               opacity: isH ? 0.18 : 0.10,
               pointerEvents: 'none',
               transition: 'opacity 0.15s',
@@ -174,7 +177,7 @@ function PackageMap({ packages, onSelect }: PackageMapProps) {
             {isH && (
               <div style={{
                 position: 'absolute', inset: 0,
-                background: `radial-gradient(ellipse at top left, ${st.accent}10 0%, transparent 60%)`,
+                background: `radial-gradient(ellipse at top left, ${alpha(health.accent, 6)} 0%, transparent 60%)`,
                 pointerEvents: 'none',
               }} />
             )}
@@ -182,12 +185,16 @@ function PackageMap({ packages, onSelect }: PackageMapProps) {
             <div style={{ fontSize: 12, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {shortName}
             </div>
-            <div style={{ fontSize: 23, fontWeight: 800, color: st.text, lineHeight: 1, letterSpacing: '-0.02em' }}>
-              {fmt(p.passRate)}
+            <div style={{ fontSize: 23, fontWeight: 800, color: health.text, lineHeight: 1, letterSpacing: '-0.02em' }}>
+              {p.passRate !== null ? fmt(p.passRate) : '—'}
             </div>
-            <div style={{ fontSize: 11, color: C.muted }}>{p.tests} tests</div>
-            <StatusBar passed={p.passed} failed={p.failed} broken={p.broken} skipped={p.skipped} total={p.tests} height={4} />
-            <div style={{ fontSize: 11, fontWeight: 600, color: covColor(p.coverage), marginTop: 1 }}>
+            <div style={{ fontSize: 11, color: C.muted }}>
+              {p.tests > 0 ? `${p.tests} tests` : 'no tests'}
+            </div>
+            {p.tests > 0 && (
+              <StatusBar passed={p.passed} failed={p.failed} broken={p.broken} skipped={p.skipped} total={p.tests} height={4} />
+            )}
+            <div style={{ fontSize: 11, fontWeight: 600, color: p.passRate !== null ? health.text : C.muted, marginTop: 1 }}>
               {fmt(p.coverage)} cov
             </div>
           </div>
@@ -203,13 +210,21 @@ interface ObservatoryProps {
   packages: PackageInfo[];
   onSelectPackage: (name: string) => void;
   onSelectDimension: (dim: string, val: string) => void;
+  onSelectFindings: () => void;
 }
 
-export function Observatory({ summary, packages, onSelectPackage, onSelectDimension }: ObservatoryProps) {
+export function Observatory({ summary, packages, onSelectPackage, onSelectDimension, onSelectFindings }: ObservatoryProps) {
   const { overall, byConnector, history, dimensions, connectors } = summary;
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const gradId = useId();
 
-  const trend = history.slice(-20).map((h, i) => ({ i, passRate: h.overall.passRate }));
+  const trend = history.slice(-20).map((h, i) => ({
+    i,
+    passRate: h.overall.passRate,
+    total: h.overall.total,
+  }));
   const avgCoverage = byConnector['lcov']?.overall.passRate ?? 0;
+  const testingOverall = deriveTestingOverall(summary);
 
   const allFindings: FindingsCount = packages.reduce(
     (acc, p) => ({ error: acc.error + p.findings.error, warning: acc.warning + p.findings.warning, info: acc.info + p.findings.info }),
@@ -224,28 +239,29 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
         <MetricCard
           label="Pass Rate"
-          value={fmt(overall.passRate)}
-          sub={`${overall.passed.toLocaleString()} / ${overall.total.toLocaleString()} records`}
-          status={passRateStatus(overall.passRate)}
-          bar={{ passed: overall.passed, failed: overall.failed, broken: overall.broken, skipped: overall.skipped, total: overall.total }}
+          value={fmt(testingOverall.passRate)}
+          sub={`${testingOverall.passed.toLocaleString()} / ${testingOverall.total.toLocaleString()} tests`}
+          health={passRateHealth(testingOverall.passRate)}
+          bar={{ passed: testingOverall.passed, failed: testingOverall.failed, broken: testingOverall.broken, skipped: testingOverall.skipped, total: testingOverall.total }}
         />
         <MetricCard
           label="Coverage"
           value={fmt(avgCoverage)}
           sub={`${byConnector['lcov']?.overall.passed ?? 0} files covered`}
-          status={coverageStatus(avgCoverage)}
+          health={coverageHealth(avgCoverage)}
         />
         <MetricCard
           label="Findings"
           value={String(allFindings.error + allFindings.warning)}
           sub={`${allFindings.error} errors · ${allFindings.warning} warnings · ${allFindings.info} info`}
-          status={findingsStatus(allFindings)}
+          health={findingsHealth(allFindings)}
+          onClick={onSelectFindings}
         />
         <MetricCard
           label="Packages"
           value={String(packages.length)}
           sub={`${connectors.length} connector${connectors.length !== 1 ? 's' : ''} active`}
-          status="neutral"
+          health={neutralHealth}
         />
       </div>
 
@@ -270,30 +286,53 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
 
         {/* Sidebar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Trend sparkline */}
+          {/* Trend sparklines */}
           {trend.length > 1 && (
             <div style={{ background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>Pass Rate Trend</div>
-              <ResponsiveContainer width="100%" height={90}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>
+                Trends
+                <span style={{ fontSize: 11, color: C.muted, fontWeight: 400, marginLeft: 8 }}>last {trend.length} runs</span>
+              </div>
+
+              {/* Test count sparkline */}
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Test count</div>
+              <ResponsiveContainer width="100%" height={56}>
                 <AreaChart data={trend}>
                   <defs>
-                    <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id={`${gradId}-count`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor={C.accent} stopOpacity={0.25} />
+                      <stop offset="95%" stopColor={C.accent} stopOpacity={0}    />
+                    </linearGradient>
+                  </defs>
+                  <Area type="monotone" dataKey="total" stroke={C.accent} strokeWidth={2}
+                    fill={`url(#${gradId}-count)`} dot={false} />
+                  <Tooltip
+                    contentStyle={{ background: C.surfaceHigh, border: `1px solid ${C.border}`, fontSize: 11, borderRadius: 8 }}
+                    formatter={(v: unknown) => [String(v), 'total records']}
+                    labelFormatter={() => ''}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+
+              {/* Pass rate sparkline */}
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, marginTop: 14 }}>Pass rate</div>
+              <ResponsiveContainer width="100%" height={56}>
+                <AreaChart data={trend}>
+                  <defs>
+                    <linearGradient id={`${gradId}-rate`} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%"  stopColor={C.passed} stopOpacity={0.25} />
                       <stop offset="95%" stopColor={C.passed} stopOpacity={0}    />
                     </linearGradient>
                   </defs>
                   <Area type="monotone" dataKey="passRate" stroke={C.passed} strokeWidth={2}
-                    fill="url(#trendGrad)" dot={false} />
+                    fill={`url(#${gradId}-rate)`} dot={false} />
                   <Tooltip
                     contentStyle={{ background: C.surfaceHigh, border: `1px solid ${C.border}`, fontSize: 11, borderRadius: 8 }}
-                    formatter={(v: number) => [fmt(v), 'Pass Rate']}
+                    formatter={(v: unknown) => [fmt(v as number), 'pass rate']}
                     labelFormatter={() => ''}
                   />
                 </AreaChart>
               </ResponsiveContainer>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>
-                last {trend.length} runs
-              </div>
             </div>
           )}
 
@@ -315,7 +354,7 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
                       </span>
                       <span style={{
                         fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 99,
-                        color: catColor, background: catColor + '18', border: `1px solid ${catColor}33`,
+                        color: catColor, background: alpha(catColor, 9), border: `1px solid ${alpha(catColor, 20)}`,
                         letterSpacing: '0.03em',
                       }}>{CONNECTOR_CATEGORY_LABEL[cat] ?? cat}</span>
                     </div>
@@ -374,30 +413,33 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
 
               {/* Rows */}
               {slices.map(s => {
-                const rowStatus = s.passRate >= 1.0 ? 'ok' : s.passRate >= 0.90 ? 'warn' : 'error';
-                const dotColor  = S[rowStatus].accent;
+                const { accent: dotColor } = passRateHealth(s.passRate);
+                const rowKey = `${dim}:${s.value}`;
+                const isActive = hoveredRow === rowKey;
                 return (
                   <button
                     key={s.value}
                     onClick={() => onSelectDimension(dim, s.value)}
                     aria-label={`${dim}: ${s.value} — ${s.total} tests, ${fmt(s.passRate)} passing. Click to view.`}
+                    onMouseEnter={() => setHoveredRow(rowKey)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    onFocus={() => setHoveredRow(rowKey)}
+                    onBlur={() => setHoveredRow(null)}
                     style={{
                       display: 'grid', gridTemplateColumns: '10px 1fr 52px 52px 16px',
                       gap: 8, alignItems: 'center', width: '100%',
-                      background: 'none', border: 'none',
+                      background: isActive ? C.surfaceHigh : 'none',
+                      border: 'none',
+                      outline: isActive ? `2px solid ${alpha(C.accent, 27)}` : 'none',
                       padding: '6px 4px 6px 0', borderRadius: 6,
                       cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = C.surfaceHigh)}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                    onFocus={e => (e.currentTarget.style.outline = `2px solid ${C.accent}`)}
-                    onBlur={e => (e.currentTarget.style.outline = 'none')}
                   >
                     <span style={{
                       width: 7, height: 7, borderRadius: '50%',
                       display: 'inline-block', justifySelf: 'center',
                       background: dotColor,
-                      boxShadow: `0 0 6px ${dotColor}66`,
+                      boxShadow: `0 0 6px ${alpha(dotColor, 40)}`,
                     }} />
 
                     <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
@@ -424,7 +466,6 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
                       color: dotColor, fontVariantNumeric: 'tabular-nums',
                     }}>{fmt(s.passRate)}</span>
 
-                    {/* Arrow indicator — always present, signals interactivity */}
                     <span style={{ color: C.dim, fontSize: 11, textAlign: 'right' }}>›</span>
                   </button>
                 );

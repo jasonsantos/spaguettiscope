@@ -1,6 +1,6 @@
 // FindingsView.tsx — flat list of all findings, grouped by severity with filter tabs.
 import React, { useState } from 'react';
-import { C } from '../shared.tsx';
+import { C, alpha } from '../shared.tsx';
 import type { RawFinding } from '../derive.ts';
 
 const SEVERITY_COLOR = { error: C.failed,  warning: C.warning, info: C.info    } as const;
@@ -50,7 +50,7 @@ export function FindingsView({ findings }: FindingsViewProps) {
       }}>
         <div style={{
           position: 'absolute', top: 0, left: 0, width: 120, height: 120,
-          background: `radial-gradient(circle at top left, ${heroColor}12, transparent 70%)`,
+          background: `radial-gradient(circle at top left, ${alpha(heroColor, 7)}, transparent 70%)`,
           pointerEvents: 'none',
         }} />
 
@@ -65,28 +65,28 @@ export function FindingsView({ findings }: FindingsViewProps) {
             <span style={{
               fontSize: 13, padding: '4px 12px', borderRadius: 6,
               background: C.failedBg, color: C.failed, fontWeight: 700,
-              border: `1px solid ${C.failed}33`,
+              border: `1px solid ${alpha(C.failed, 20)}`,
             }}>{counts.error} error{counts.error !== 1 ? 's' : ''}</span>
           )}
           {counts.warning > 0 && (
             <span style={{
               fontSize: 13, padding: '4px 12px', borderRadius: 6,
               background: C.warningBg, color: C.warning, fontWeight: 700,
-              border: `1px solid ${C.warning}33`,
+              border: `1px solid ${alpha(C.warning, 20)}`,
             }}>{counts.warning} warning{counts.warning !== 1 ? 's' : ''}</span>
           )}
           {counts.info > 0 && (
             <span style={{
               fontSize: 13, padding: '4px 12px', borderRadius: 6,
               background: C.infoBg, color: C.info, fontWeight: 700,
-              border: `1px solid ${C.info}33`,
+              border: `1px solid ${alpha(C.info, 20)}`,
             }}>{counts.info} info</span>
           )}
           {findings.length === 0 && (
             <span style={{
               fontSize: 13, padding: '4px 12px', borderRadius: 6,
               background: C.passedBg, color: C.passed, fontWeight: 700,
-              border: `1px solid ${C.passed}33`,
+              border: `1px solid ${alpha(C.passed, 20)}`,
             }}>✓ No findings</span>
           )}
         </div>
@@ -95,7 +95,7 @@ export function FindingsView({ findings }: FindingsViewProps) {
           <span style={{
             marginLeft: 'auto', fontSize: 12, color: C.dim,
             background: heroBg, padding: '2px 10px', borderRadius: 99,
-            border: `1px solid ${heroColor}33`, fontWeight: 600,
+            border: `1px solid ${alpha(heroColor, 20)}`, fontWeight: 600,
           }}>{findings.length} total</span>
         )}
       </div>
@@ -116,7 +116,7 @@ export function FindingsView({ findings }: FindingsViewProps) {
                 style={{
                   fontSize: 12, padding: '5px 14px', borderRadius: 6,
                   cursor: 'pointer', fontWeight: 600,
-                  background: isActive ? col + '22' : C.surface,
+                  background: isActive ? alpha(col, 13) : C.surface,
                   color:      isActive ? col       : C.muted,
                   border:     `1px solid ${isActive ? col : C.border}`,
                   transition: 'all 0.12s',
@@ -157,7 +157,7 @@ export function FindingsView({ findings }: FindingsViewProps) {
                 {/* Corner glow */}
                 <div style={{
                   position: 'absolute', top: 0, left: 0, width: 80, height: 80,
-                  background: `radial-gradient(circle at top left, ${col}10, transparent 70%)`,
+                  background: `radial-gradient(circle at top left, ${alpha(col, 6)}, transparent 70%)`,
                   pointerEvents: 'none',
                 }} />
 
@@ -166,7 +166,7 @@ export function FindingsView({ findings }: FindingsViewProps) {
                   <span style={{
                     fontSize: 11, padding: '2px 8px', borderRadius: 4,
                     background: bg, color: col, fontWeight: 700,
-                    border: `1px solid ${col}33`, flexShrink: 0,
+                    border: `1px solid ${alpha(col, 20)}`, flexShrink: 0,
                   }}>{ico} {sev}</span>
 
                   <code style={{

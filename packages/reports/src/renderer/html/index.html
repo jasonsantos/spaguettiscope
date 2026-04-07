@@ -1,9 +1,95 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SpaguettiScope Dashboard</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+
+      /* ── Dark theme (default) ─────────────────────────────────────── */
+      :root {
+        --c-bg:          oklch(7.5%  0.012 255);
+        --c-well:        oklch(6%    0.013 255);
+        --c-surface:     oklch(12%   0.014 255);
+        --c-surface-hi:  oklch(17%   0.015 255);
+        --c-border:      oklch(22%   0.016 253);
+        --c-border-lt:   oklch(28%   0.017 253);
+        --c-text:        oklch(92%   0.008 255);
+        --c-muted:       oklch(67%   0.014 253);
+        --c-dim:         oklch(55%   0.013 253);
+        --c-accent:      oklch(67%   0.175 263);
+        --c-passed:      oklch(82%   0.195 145);
+        --c-passed-bg:   oklch(18%   0.055 155);
+        --c-failed:      oklch(67%   0.185  25);
+        --c-failed-bg:   oklch(16%   0.065  22);
+        --c-skipped:     oklch(72%   0.012 253);
+        --c-broken:      oklch(73%   0.175  56);
+        --c-warning:     oklch(85%   0.175  88);
+        --c-warning-bg:  oklch(15%   0.048  78);
+        --c-info:        oklch(79%   0.115 226);
+        --c-info-bg:     oklch(13%   0.045 242);
+        --c-coverage:    oklch(77%   0.130 295);
+      }
+
+      /* ── Light theme (system) ─────────────────────────────────────── */
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          --c-bg:          oklch(98%   0.004 255);
+          --c-well:        oklch(99.5% 0.002 255);
+          --c-surface:     oklch(96%   0.006 255);
+          --c-surface-hi:  oklch(93%   0.008 255);
+          --c-border:      oklch(86%   0.010 255);
+          --c-border-lt:   oklch(90%   0.007 255);
+          --c-text:        oklch(16%   0.010 255);
+          --c-muted:       oklch(46%   0.011 255);
+          --c-dim:         oklch(58%   0.009 255);
+          --c-accent:      oklch(48%   0.200 263);
+          --c-passed:      oklch(45%   0.180 145);
+          --c-passed-bg:   oklch(94%   0.045 145);
+          --c-failed:      oklch(47%   0.200  25);
+          --c-failed-bg:   oklch(96%   0.030  22);
+          --c-skipped:     oklch(52%   0.010 253);
+          --c-broken:      oklch(53%   0.160  56);
+          --c-warning:     oklch(50%   0.160  78);
+          --c-warning-bg:  oklch(95%   0.040  88);
+          --c-info:        oklch(50%   0.150 226);
+          --c-info-bg:     oklch(95%   0.025 242);
+          --c-coverage:    oklch(50%   0.175 295);
+        }
+      }
+
+      /* ── Forced light ─────────────────────────────────────────────── */
+      [data-theme="light"] {
+        --c-bg:          oklch(98%   0.004 255);
+        --c-well:        oklch(99.5% 0.002 255);
+        --c-surface:     oklch(96%   0.006 255);
+        --c-surface-hi:  oklch(93%   0.008 255);
+        --c-border:      oklch(86%   0.010 255);
+        --c-border-lt:   oklch(90%   0.007 255);
+        --c-text:        oklch(16%   0.010 255);
+        --c-muted:       oklch(46%   0.011 255);
+        --c-dim:         oklch(58%   0.009 255);
+        --c-accent:      oklch(48%   0.200 263);
+        --c-passed:      oklch(45%   0.180 145);
+        --c-passed-bg:   oklch(94%   0.045 145);
+        --c-failed:      oklch(47%   0.200  25);
+        --c-failed-bg:   oklch(96%   0.030  22);
+        --c-skipped:     oklch(52%   0.010 253);
+        --c-broken:      oklch(53%   0.160  56);
+        --c-warning:     oklch(50%   0.160  78);
+        --c-warning-bg:  oklch(95%   0.040  88);
+        --c-info:        oklch(50%   0.150 226);
+        --c-info-bg:     oklch(95%   0.025 242);
+        --c-coverage:    oklch(50%   0.175 295);
+      }
+
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--c-bg);
+        color: var(--c-text);
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

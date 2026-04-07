@@ -1,36 +1,40 @@
 // shared.tsx — design tokens, helpers, and small shared React components.
 import React from 'react';
 
-// ─── Color tokens (WCAG AA throughout) ───────────────────────────────────────
-// All text/bg pairings ≥ 4.5:1. dim (≥3.8:1) used only for large/bold text.
+// ─── Color tokens (CSS custom properties — theme defined in index.html) ───────
 export const C = {
-  bg:          '#0d1117',
-  surface:     '#161b27',
-  surfaceHigh: '#1e2436',
-  border:      '#252d42',
-  borderLight: '#2e3a52',
-  text:        '#e4e7ef',   // ~14:1 on bg
-  muted:       '#9da5bc',   // ~5.5:1 on bg
-  dim:         '#7b8299',   // ~3.8:1 — large/bold only
-  accent:      '#7c9bff',   // ~5.2:1 on bg
-  passed:      '#4ade80',   // ~7.3:1 on bg
-  passedBg:    '#0a2e1a',
-  failed:      '#f87171',   // ~5.1:1 on bg
-  failedBg:    '#3d1212',
-  skipped:     '#a8b3c8',   // ~6.0:1 on bg
-  broken:      '#fb923c',   // ~5.8:1 on bg
-  warning:     '#fcd34d',   // ~8.2:1 on bg
-  warningBg:   '#2e1f04',
-  info:        '#7dc4ff',   // ~6.9:1 on bg
-  infoBg:      '#0a1f38',
-  coverage:    '#c4b5fd',   // ~7.0:1 on bg
+  bg:          'var(--c-bg)',
+  well:        'var(--c-well)',
+  surface:     'var(--c-surface)',
+  surfaceHigh: 'var(--c-surface-hi)',
+  border:      'var(--c-border)',
+  borderLight: 'var(--c-border-lt)',
+  text:        'var(--c-text)',
+  muted:       'var(--c-muted)',
+  dim:         'var(--c-dim)',
+  accent:      'var(--c-accent)',
+  passed:      'var(--c-passed)',
+  passedBg:    'var(--c-passed-bg)',
+  failed:      'var(--c-failed)',
+  failedBg:    'var(--c-failed-bg)',
+  skipped:     'var(--c-skipped)',
+  broken:      'var(--c-broken)',
+  warning:     'var(--c-warning)',
+  warningBg:   'var(--c-warning-bg)',
+  info:        'var(--c-info)',
+  infoBg:      'var(--c-info-bg)',
+  coverage:    'var(--c-coverage)',
 } as const;
+
+/** Alpha-blend a CSS custom property value. Uses color-mix() — modern browsers only. */
+export const alpha = (colorVar: string, pct: number) =>
+  `color-mix(in oklch, ${colorVar} ${pct}%, transparent)`;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 export const fmt     = (n: number) => `${(n * 100).toFixed(1)}%`;
 export const hue     = (r: number) => r >= 0.98 ? C.passed : r >= 0.85 ? C.warning : C.failed;
 export const covColor = (c: number) => c >= 0.80 ? C.passed : c >= 0.60 ? C.warning : C.failed;
-export const dur     = (ms: number) => ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
+export const dur     = (ms: number) => ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${Math.round(ms)}ms`;
 export const totalF  = (f: { error: number; warning: number; info: number }) => f.error + f.warning + f.info;
 
 export const STATUS_DOT: Record<string, string> = {
@@ -222,6 +226,42 @@ export function PackageIcon({
       {paths}
     </svg>
   );
+}
+
+// ─── Unified health / status helpers ─────────────────────────────────────────
+// Single source of truth for pass-rate → color/chip mapping, used by all views.
+export interface HealthInfo {
+  /** Border, glow, and icon color */
+  accent: string;
+  /** Chip / overlay background */
+  bg: string;
+  /** Status chip label — empty string means no chip */
+  chip: string;
+  /** Large value text color (equals accent except for the neutral state) */
+  text: string;
+}
+
+export const neutralHealth: HealthInfo = {
+  accent: C.border, bg: 'transparent', chip: '', text: C.text,
+};
+
+export function passRateHealth(r: number): HealthInfo {
+  if (r >= 1.0) return { accent: C.passed,  bg: C.passedBg,  chip: '✓ All passing',   text: C.passed  };
+  if (r >= 0.9) return { accent: C.warning, bg: C.warningBg, chip: '⚠ Some failures', text: C.warning };
+  return               { accent: C.failed,  bg: C.failedBg,  chip: '✕ Failures',      text: C.failed  };
+}
+
+export function coverageHealth(c: number): HealthInfo {
+  if (c >= 0.8) return { accent: C.passed,  bg: C.passedBg,  chip: '✓ Good coverage', text: C.passed  };
+  if (c >= 0.6) return { accent: C.warning, bg: C.warningBg, chip: '⚠ Low coverage',  text: C.warning };
+  return               { accent: C.failed,  bg: C.failedBg,  chip: '✕ No coverage',   text: C.failed  };
+}
+
+export function findingsHealth(f: { error: number; warning: number; info: number }): HealthInfo {
+  if (f.error   > 0) return { accent: C.failed,  bg: C.failedBg,  chip: '✕ Errors',   text: C.failed  };
+  if (f.warning > 0) return { accent: C.warning, bg: C.warningBg, chip: '⚠ Warnings', text: C.warning };
+  if (f.info    > 0) return { accent: C.info,    bg: C.infoBg,    chip: 'ℹ Info',      text: C.info    };
+  return                    { accent: C.passed,  bg: C.passedBg,  chip: '✓ Clean',     text: C.passed  };
 }
 
 // ─── BDD step source renderer ─────────────────────────────────────────────────

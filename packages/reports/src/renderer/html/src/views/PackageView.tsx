@@ -1,30 +1,9 @@
 // PackageView.tsx — drill-down for a single package: gauges, dimension chips, suite tree.
 import React, { useState } from 'react';
-import { C, fmt, hue, covColor, totalF, Donut, FindingsBadge } from '../shared.tsx';
+import { C, alpha, fmt, hue, covColor, totalF, Donut, FindingsBadge, passRateHealth, coverageHealth, findingsHealth } from '../shared.tsx';
 import { SuiteTree } from './SuiteTree.tsx';
 import type { PackageInfo, SuiteInfo } from '../derive.ts';
 
-// ─── Local health helpers ─────────────────────────────────────────────────────
-type Health = { accent: string; bg: string; chip: string; chipColor: string };
-
-function passHealth(r: number): Health {
-  if (r >= 1.0) return { accent: C.passed,  bg: C.passedBg,  chip: '✓ All passing', chipColor: C.passed  };
-  if (r >= 0.9) return { accent: C.warning, bg: C.warningBg, chip: '⚠ Some failing',  chipColor: C.warning };
-  return            { accent: C.failed,  bg: C.failedBg,  chip: '✕ Failures',      chipColor: C.failed  };
-}
-
-function covHealth(c: number): Health {
-  if (c >= 0.8) return { accent: C.passed,  bg: C.passedBg,  chip: '✓ Good coverage', chipColor: C.passed  };
-  if (c >= 0.6) return { accent: C.warning, bg: C.warningBg, chip: '⚠ Low coverage',   chipColor: C.warning };
-  return             { accent: C.failed,  bg: C.failedBg,  chip: '✕ No coverage',    chipColor: C.failed  };
-}
-
-function findHealth(f: { error: number; warning: number; info: number }): Health {
-  if (f.error   > 0) return { accent: C.failed,  bg: C.failedBg,  chip: '✕ Errors',   chipColor: C.failed  };
-  if (f.warning > 0) return { accent: C.warning, bg: C.warningBg, chip: '⚠ Warnings', chipColor: C.warning };
-  if (f.info    > 0) return { accent: C.info,    bg: C.infoBg,    chip: 'ℹ Info',      chipColor: C.info    };
-  return                    { accent: C.passed,  bg: C.passedBg,  chip: '✓ Clean',     chipColor: C.passed  };
-}
 
 interface PackageViewProps {
   pkg: PackageInfo;
@@ -58,9 +37,9 @@ export function PackageView({ pkg, allSuites }: PackageViewProps) {
     ? suites.filter(s => s[dimFilter.dim as 'role' | 'domain' | 'layer'] === dimFilter.val)
     : suites;
 
-  const pH = passHealth(pkg.passRate);
-  const cH = covHealth(pkg.coverage);
-  const fH = findHealth(pkg.findings);
+  const pH = passRateHealth(pkg.passRate ?? 0);
+  const cH = coverageHealth(pkg.coverage);
+  const fH = findingsHealth(pkg.findings);
 
   return (
     <div>
@@ -76,16 +55,16 @@ export function PackageView({ pkg, allSuites }: PackageViewProps) {
         }}>
           <div style={{
             position: 'absolute', top: 0, left: 0, width: 100, height: 100,
-            background: `radial-gradient(circle at top left, ${pH.accent}18, transparent 70%)`,
+            background: `radial-gradient(circle at top left, ${alpha(pH.accent, 9)}, transparent 70%)`,
             pointerEvents: 'none',
           }} />
           <span style={{
             position: 'absolute', top: 10, right: 10, fontSize: 10, padding: '2px 7px',
-            borderRadius: 4, background: pH.bg, color: pH.chipColor, fontWeight: 600,
+            borderRadius: 4, background: pH.bg, color: pH.accent, fontWeight: 600,
             letterSpacing: '0.04em', whiteSpace: 'nowrap',
           }}>{pH.chip}</span>
           <div style={{ marginTop: 22 }}>
-            <Donut value={pkg.passRate} size={88} color={hue(pkg.passRate)}
+            <Donut value={pkg.passRate ?? 0} size={88} color={hue(pkg.passRate ?? 0)}
               label="Pass Rate" sub={`${pkg.passed}/${pkg.tests} tests`} />
           </div>
         </div>
@@ -99,12 +78,12 @@ export function PackageView({ pkg, allSuites }: PackageViewProps) {
         }}>
           <div style={{
             position: 'absolute', top: 0, left: 0, width: 100, height: 100,
-            background: `radial-gradient(circle at top left, ${cH.accent}18, transparent 70%)`,
+            background: `radial-gradient(circle at top left, ${alpha(cH.accent, 9)}, transparent 70%)`,
             pointerEvents: 'none',
           }} />
           <span style={{
             position: 'absolute', top: 10, right: 10, fontSize: 10, padding: '2px 7px',
-            borderRadius: 4, background: cH.bg, color: cH.chipColor, fontWeight: 600,
+            borderRadius: 4, background: cH.bg, color: cH.accent, fontWeight: 600,
             letterSpacing: '0.04em', whiteSpace: 'nowrap',
           }}>{cH.chip}</span>
           <div style={{ marginTop: 22 }}>
@@ -122,15 +101,15 @@ export function PackageView({ pkg, allSuites }: PackageViewProps) {
         }}>
           <div style={{
             position: 'absolute', top: 0, left: 0, width: 100, height: 100,
-            background: `radial-gradient(circle at top left, ${fH.accent}18, transparent 70%)`,
+            background: `radial-gradient(circle at top left, ${alpha(fH.accent, 9)}, transparent 70%)`,
             pointerEvents: 'none',
           }} />
           <span style={{
             position: 'absolute', top: 10, right: 10, fontSize: 10, padding: '2px 7px',
-            borderRadius: 4, background: fH.bg, color: fH.chipColor, fontWeight: 600,
+            borderRadius: 4, background: fH.bg, color: fH.accent, fontWeight: 600,
             letterSpacing: '0.04em',
           }}>{fH.chip}</span>
-          <div style={{ marginTop: 22, fontSize: 36, fontWeight: 800, lineHeight: 1, color: fH.chipColor }}>
+          <div style={{ marginTop: 22, fontSize: 36, fontWeight: 800, lineHeight: 1, color: fH.accent }}>
             {totalF(pkg.findings)}
           </div>
           <div style={{ fontSize: 12, color: C.muted }}>Findings</div>
@@ -146,7 +125,7 @@ export function PackageView({ pkg, allSuites }: PackageViewProps) {
         }}>
           <div style={{
             position: 'absolute', top: 0, left: 0, width: 100, height: 100,
-            background: `radial-gradient(circle at top left, ${C.accent}18, transparent 70%)`,
+            background: `radial-gradient(circle at top left, ${alpha(C.accent, 9)}, transparent 70%)`,
             pointerEvents: 'none',
           }} />
           <div style={{ marginTop: 22, fontSize: 36, fontWeight: 800, color: C.text, lineHeight: 1 }}>
@@ -179,7 +158,7 @@ export function PackageView({ pkg, allSuites }: PackageViewProps) {
                         style={{
                           fontSize: 12, padding: '4px 10px', borderRadius: 6,
                           cursor: 'pointer', fontWeight: 500,
-                          background: active ? C.accent + '22' : C.surface,
+                          background: active ? alpha(C.accent, 13) : C.surface,
                           color:      active ? C.accent       : C.muted,
                           border:     `1px solid ${active ? C.accent : C.border}`,
                           transition: 'all 0.12s',

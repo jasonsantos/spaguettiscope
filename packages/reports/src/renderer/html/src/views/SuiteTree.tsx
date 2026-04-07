@@ -1,6 +1,6 @@
 // SuiteTree.tsx — expandable suite + test tree, shared by PackageView and DimensionView.
 import React, { useState } from 'react';
-import { C, fmt, hue, covColor, dur, STATUS_DOT, BddSource } from '../shared.tsx';
+import { C, alpha, fmt, dur, STATUS_DOT, BddSource, coverageHealth } from '../shared.tsx';
 import type { SuiteInfo } from '../derive.ts';
 
 interface SuiteTreeProps {
@@ -80,33 +80,35 @@ export function SuiteTree({ suites, activeDim, pageSize = 10 }: SuiteTreeProps) 
                 return (
                   <span key={key} style={{
                     fontSize: 11, padding: '2px 7px', borderRadius: 4, flexShrink: 0,
-                    background: isActive ? C.accent + '22' : C.border,
+                    background: isActive ? alpha(C.accent, 13) : C.border,
                     color:      isActive ? C.accent       : C.muted,
-                    border:     isActive ? `1px solid ${C.accent}44` : '1px solid transparent',
+                    border:     isActive ? `1px solid ${alpha(C.accent, 27)}` : '1px solid transparent',
                     fontWeight: isActive ? 700 : 400,
                   }}>{val}</span>
                 );
               })}
 
-              {/* Counts */}
+              {/* Passing count */}
               <span style={{
-                fontSize: 12, color: C.muted, width: 58, textAlign: 'right',
-                flexShrink: 0, fontVariantNumeric: 'tabular-nums',
-              }}>{suite.tests.length} tests</span>
-
-              {/* Pass rate */}
-              <span style={{
-                fontSize: 13, fontWeight: 700, width: 52, textAlign: 'right',
-                color: hue(sRate), flexShrink: 0, fontVariantNumeric: 'tabular-nums',
-              }}>{fmt(sRate)}</span>
+                fontSize: 12, flexShrink: 0, fontVariantNumeric: 'tabular-nums',
+                color: failed > 0 ? C.failed : C.passed, fontWeight: 600,
+              }}>
+                {passed}/{suite.tests.length}
+              </span>
 
               {/* Coverage */}
-              {suite.coverage !== null && (
-                <span style={{
-                  fontSize: 12, width: 52, textAlign: 'right', flexShrink: 0,
-                  color: covColor(suite.coverage), fontVariantNumeric: 'tabular-nums',
-                }}>{fmt(suite.coverage)}</span>
-              )}
+              {suite.coverage !== null && (() => {
+                const ch = coverageHealth(suite.coverage);
+                return (
+                  <span style={{
+                    fontSize: 10, padding: '1px 6px', borderRadius: 4, flexShrink: 0,
+                    fontWeight: 600,
+                    background: ch.bg,
+                    color:      ch.accent,
+                    border:     `1px solid ${alpha(ch.accent, 20)}`,
+                  }}>{fmt(suite.coverage)}</span>
+                );
+              })()}
             </button>
 
             {/* Suite body */}
@@ -118,8 +120,8 @@ export function SuiteTree({ suites, activeDim, pageSize = 10 }: SuiteTreeProps) 
                   textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{suite.file}</div>
 
-                {suite.tests.map((test, ti) => {
-                  const key       = `${suite.file}::${ti}`;
+                {suite.tests.map(test => {
+                  const key       = test.id;
                   const tOpen     = testOpen === key;
                   const hasDetail = Boolean(test.bddSource || test.errorMessage);
 
@@ -130,7 +132,7 @@ export function SuiteTree({ suites, activeDim, pageSize = 10 }: SuiteTreeProps) 
                         aria-expanded={hasDetail ? tOpen : undefined}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '7px 10px', borderRadius: 7,
+                          padding: '7px 10px', borderRadius: 8,
                           cursor: hasDetail ? 'pointer' : 'default',
                           width: '100%', border: 'none', textAlign: 'left',
                           background: tOpen ? C.surfaceHigh : 'transparent',
@@ -167,7 +169,7 @@ export function SuiteTree({ suites, activeDim, pageSize = 10 }: SuiteTreeProps) 
                       {/* Test detail panel */}
                       {tOpen && (
                         <div style={{
-                          margin: '4px 10px 8px', background: '#0a0e17',
+                          margin: '4px 10px 8px', background: C.well,
                           borderRadius: 8, padding: 16, border: `1px solid ${C.borderLight}`,
                         }}>
                           {test.bddSource && (
@@ -187,7 +189,7 @@ export function SuiteTree({ suites, activeDim, pageSize = 10 }: SuiteTreeProps) 
                               }}>Error</div>
                               <pre style={{
                                 fontFamily: 'monospace', fontSize: 12, color: C.failed,
-                                background: C.failedBg + '88', borderRadius: 6,
+                                background: alpha(C.failedBg, 53), borderRadius: 6,
                                 padding: 12, margin: 0, whiteSpace: 'pre-wrap', lineHeight: 1.6,
                               }}>{test.errorMessage}</pre>
                             </div>
@@ -223,7 +225,7 @@ export function SuiteTree({ suites, activeDim, pageSize = 10 }: SuiteTreeProps) 
               style={{
                 width: 32, height: 32, borderRadius: 6,
                 border: `1px solid ${i === page ? C.accent : C.border}`,
-                background: i === page ? C.accent + '22' : 'none',
+                background: i === page ? alpha(C.accent, 13) : 'none',
                 color: i === page ? C.accent : C.muted,
                 fontWeight: i === page ? 700 : 400, cursor: 'pointer', fontSize: 13,
               }}>{i + 1}</button>
