@@ -134,44 +134,51 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       })
       const importGraph = mergeImportGraphs(graphs)
 
-      // Only run if we have a skeleton to look up attributes from
-      if (skeleton) {
-        for (const record of records) {
-          if (record.dimensions.role !== 'test') continue
+      for (const record of records) {
+        if (record.dimensions.role !== 'test') continue
 
-          const absFilePath = resolveRecordSourceFile(record, projectRoot)
-          if (!absFilePath) continue
+        const absFilePath = resolveRecordSourceFile(record, projectRoot)
+        if (!absFilePath) continue
 
-          let relFilePath: string
-          try {
-            relFilePath = relative(projectRoot, absFilePath)
-          } catch {
-            continue
-          }
+        let relFilePath: string
+        try {
+          relFilePath = relative(projectRoot, absFilePath)
+        } catch {
+          continue
+        }
 
-          const imports = importGraph.imports.get(relFilePath)
-          if (!imports || imports.size === 0) continue
+        const imports = importGraph.imports.get(relFilePath)
+        if (!imports || imports.size === 0) continue
 
-          const inherited: Record<string, string> = {}
-          for (const importedFile of imports) {
+        const inherited: Record<string, string> = {}
+        for (const importedFile of imports) {
+          // Attribute lookup: skeleton takes precedence (human-annotated), inference fills the rest
+          let attrs: Record<string, string> = {}
+          if (skeleton) {
             try {
-              const attrs = matchFile(join(projectRoot, importedFile), skeleton, projectRoot)
-              // Don't inherit role:test from imported files — only non-test roles are meaningful
-              if (attrs['role'] === 'test') delete attrs['role']
-              Object.assign(inherited, attrs)
+              attrs = matchFile(join(projectRoot, importedFile), skeleton, projectRoot)
             } catch {
+              // file outside projectRoot — skip
               continue
             }
           }
+          // Fill in any dimensions the skeleton didn't cover using the inference engine
+          const inferred = engine.infer(join(projectRoot, importedFile))
+          for (const [k, v] of Object.entries(inferred)) {
+            if (!(k in attrs)) attrs[k] = v
+          }
+          // Don't inherit role:test from imported files — only non-test roles are meaningful
+          if (attrs['role'] === 'test') delete attrs['role']
+          Object.assign(inherited, attrs)
+        }
 
-          // role always inherits from the import target (that's the whole point of this pass —
-          // a test file for a library module should appear under role:library, not role:test).
-          // All other dimensions: direct skeleton annotation wins over inherited values.
-          const skeletonKeys = skeletonSetKeys.get(record) ?? new Set<string>()
-          for (const [k, v] of Object.entries(inherited)) {
-            if (k === 'role' || !skeletonKeys.has(k)) {
-              record.dimensions[k] = v
-            }
+        // role always inherits from the import target (that's the whole point of this pass —
+        // a test file for a library module should appear under role:library, not role:test).
+        // All other dimensions: direct skeleton annotation wins over inherited values.
+        const skeletonKeys = skeletonSetKeys.get(record) ?? new Set<string>()
+        for (const [k, v] of Object.entries(inherited)) {
+          if (k === 'role' || !skeletonKeys.has(k)) {
+            record.dimensions[k] = v
           }
         }
       }

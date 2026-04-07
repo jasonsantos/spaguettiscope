@@ -93,13 +93,25 @@ function resolveSpecifier(
   // No cross-package edges
   if (!candidate.startsWith(normPackageRoot + '/') && candidate !== normPackageRoot) return null
 
-  const extensions = ['', '.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx', '/index.js', '/index.jsx']
-  for (const ext of extensions) {
-    const full = candidate + ext
-    if (existsSync(full) && statSync(full).isFile()) {
-      return relative(projectRoot, full)
+  // TypeScript ESM convention: imports use .js but the actual file is .ts/.tsx.
+  // Build a list of base paths to probe before trying bare-extension variants.
+  const bases: string[] = [candidate]
+  if (candidate.endsWith('.js'))  bases.push(candidate.slice(0, -3) + '.ts',  candidate.slice(0, -3) + '.tsx')
+  if (candidate.endsWith('.jsx')) bases.push(candidate.slice(0, -4) + '.tsx')
+  if (candidate.endsWith('.mjs')) bases.push(candidate.slice(0, -4) + '.mts')
+
+  for (const base of bases) {
+    if (existsSync(base) && statSync(base).isFile()) return relative(projectRoot, base)
+  }
+
+  // No extension supplied — try all common ones
+  if (!candidate.match(/\.[mc]?[jt]sx?$/)) {
+    for (const ext of ['.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx', '/index.js', '/index.jsx']) {
+      const full = candidate + ext
+      if (existsSync(full) && statSync(full).isFile()) return relative(projectRoot, full)
     }
   }
+
   return null
 }
 
