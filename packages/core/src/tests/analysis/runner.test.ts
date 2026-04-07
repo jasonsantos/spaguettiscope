@@ -61,6 +61,7 @@ describe('runAnalysis', () => {
     const importGraph: ImportGraph = {
       imports: new Map([['src/client.tsx', new Set(['src/server.ts'])]]),
       importedBy: new Map([['src/server.ts', new Set(['src/client.tsx'])]]),
+      typeOnlyImports: new Map(),
     }
 
     const rule: AnalysisRule<'edges'> = {

@@ -11,6 +11,7 @@ function makeCtx(
   const graph: ImportGraph = {
     imports: new Map(),
     importedBy: new Map(Object.entries(importedBy).map(([k, v]) => [k, new Set(v)])),
+    typeOnlyImports: new Map(),
   }
   return {
     topology: new Map(Object.entries(topology)),

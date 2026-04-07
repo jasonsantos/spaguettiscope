@@ -226,7 +226,7 @@ export function mergeImportGraphs(graphs: ImportGraph[]): ImportGraph {
   }
 
   // An edge is typeOnly in merged only if it's typeOnly in every graph that contains it.
-  // Two-pass: collect all typeOnly edges, then demote any that are concrete in any graph.
+  // Two-pass: collect all typeOnly candidates, then demote any that are concrete in any graph.
   const candidateTypeOnly = new Map<string, Set<string>>()
   for (const g of graphs) {
     for (const [src, targets] of g.typeOnlyImports) {

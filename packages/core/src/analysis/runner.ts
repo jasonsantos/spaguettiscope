@@ -9,6 +9,7 @@ import type {
 } from './types.js'
 import type { DimensionSet } from '../classification/model.js'
 import type { ImportGraph } from '../graph/index.js'
+import type { LayerPolicyEdge } from '../skeleton/types.js'
 
 export interface RunAnalysisOptions {
   /** All project file paths (relative to project root). */
@@ -19,12 +20,14 @@ export interface RunAnalysisOptions {
   importGraph?: ImportGraph
   testRecords?: TestRecord[]
   cache: IntermediateCache
+  layerPolicy?: Record<string, LayerPolicyEdge[]>
+  layerPolicyDraft?: boolean
 }
 
 export function runAnalysis(options: RunAnalysisOptions): Finding[] {
-  const { files, topology, rules, importGraph, testRecords, cache } = options
+  const { files, topology, rules, importGraph, testRecords, cache, layerPolicy, layerPolicyDraft } = options
 
-  const ctx: AnalysisContext = { topology, importGraph, testRecords, cache }
+  const ctx: AnalysisContext = { topology, importGraph, testRecords, cache, layerPolicy, layerPolicyDraft }
   const findings: Finding[] = []
 
   // ── Files corpus ─────────────────────────────────────────────────────────

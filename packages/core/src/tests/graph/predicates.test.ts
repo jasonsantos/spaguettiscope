@@ -10,6 +10,7 @@ function makeGraph(
   return {
     imports: new Map(Object.entries(imports).map(([k, v]) => [k, new Set(v)])),
     importedBy: new Map(Object.entries(importedBy).map(([k, v]) => [k, new Set(v)])),
+    typeOnlyImports: new Map(),
   }
 }
 

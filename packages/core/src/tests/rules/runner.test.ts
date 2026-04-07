@@ -234,6 +234,7 @@ describe('runRules — graph predicates', () => {
     const graph: ImportGraph = {
       imports: new Map([['src/index.ts', new Set(['src/utils.ts'])]]),
       importedBy: new Map([['src/utils.ts', new Set(['src/index.ts'])]]),
+      typeOnlyImports: new Map(),
     }
 
     const result = runRules(['src/utils.ts', 'src/other.ts'], rules, projectRoot, {

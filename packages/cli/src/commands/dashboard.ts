@@ -303,6 +303,8 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       rules: [...builtInAnalysisRules, ...pluginRules],
       importGraph: analysisImportGraph,
       cache: analysisCache,
+      layerPolicy: skeleton?.layerPolicy,
+      layerPolicyDraft: skeleton?.layerPolicyDraft,
     })
     saveIntermediateCache(intermediatesPath, analysisCache)
 

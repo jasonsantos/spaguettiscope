@@ -390,6 +390,7 @@ describe('playwrightRules — page-object graph detection', () => {
     const graph: ImportGraph = {
       imports: new Map([['e2e/login.spec.ts', new Set(['e2e/pages/LoginPage.ts'])]]),
       importedBy: new Map([['e2e/pages/LoginPage.ts', new Set(['e2e/login.spec.ts'])]]),
+      typeOnlyImports: new Map(),
     }
     const result = runRules(
       ['e2e/pages/LoginPage.ts', 'e2e/login.spec.ts'],
@@ -407,6 +408,7 @@ describe('playwrightRules — page-object graph detection', () => {
     const graph: ImportGraph = {
       imports: new Map(),
       importedBy: new Map(),
+      typeOnlyImports: new Map(),
     }
     const result = runRules(['src/utils.ts'], playwrightRules, projectRoot, { importGraph: graph })
     const candidate = result.find(c => c.source === 'playwright:page-object')

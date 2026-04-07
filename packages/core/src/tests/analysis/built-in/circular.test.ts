@@ -13,7 +13,7 @@ function makeCtx(imports: Record<string, string[]>): AnalysisContext {
       importedBy.get(to)!.add(from)
     }
   }
-  const graph: ImportGraph = { imports: importMap, importedBy }
+  const graph: ImportGraph = { imports: importMap, importedBy, typeOnlyImports: new Map() }
   return { topology: new Map(), importGraph: graph, cache: createIntermediateCache() }
 }
 

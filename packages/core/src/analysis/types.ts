@@ -1,9 +1,10 @@
 import type { DimensionSet } from '../classification/model.js'
 import type { ImportGraph } from '../graph/index.js'
+import type { LayerPolicyEdge } from '../skeleton/types.js'
 
 // ── Finding ─────────────────────────────────────────────────────────────────
 
-export type FindingKind = 'violation' | 'coverage-gap' | 'flakiness' | 'unused' | 'metric'
+export type FindingKind = 'violation' | 'coverage-gap' | 'flakiness' | 'unused' | 'metric' | 'layer-violation'
 export type Severity = 'error' | 'warning' | 'info'
 
 export interface Finding {
@@ -87,4 +88,8 @@ export interface AnalysisContext {
   /** Present only if at least one active rule declared 'testRecords' in needs. */
   testRecords?: TestRecord[]
   cache: IntermediateCache
+  /** Layer policy edges from the skeleton, keyed by package rel path. */
+  layerPolicy?: Record<string, LayerPolicyEdge[]>
+  /** When true, layer policy rules emit no findings (policy is still being drafted). */
+  layerPolicyDraft?: boolean
 }
