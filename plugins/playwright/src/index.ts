@@ -6,6 +6,8 @@ export const playwrightPlugin: ScanPlugin = {
   id: 'playwright',
   canApply,
   rules: () => playwrightRules,
+  // Playwright applies to any package with E2E tests — most likely a webapp.
+  packageType: () => 'webapp',
 }
 
 export default playwrightPlugin

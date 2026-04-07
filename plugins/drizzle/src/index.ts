@@ -6,6 +6,7 @@ export const drizzlePlugin: ScanPlugin = {
   id: 'drizzle',
   canApply,
   rules: () => drizzleRules,
+  packageType: () => 'drizzle',
 }
 
 export default drizzlePlugin

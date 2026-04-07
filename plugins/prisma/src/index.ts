@@ -6,6 +6,7 @@ export const prismaPlugin: ScanPlugin = {
   id: 'prisma',
   canApply,
   rules: () => prismaRules,
+  packageType: () => 'prisma',
 }
 
 export default prismaPlugin

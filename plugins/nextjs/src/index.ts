@@ -6,6 +6,7 @@ export const nextjsPlugin: ScanPlugin = {
   id: 'nextjs',
   canApply,
   rules: () => nextjsRules,
+  packageType: () => 'nextjs',
 }
 
 export default nextjsPlugin

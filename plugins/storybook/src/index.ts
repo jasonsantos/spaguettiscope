@@ -6,6 +6,7 @@ export const storybookPlugin: ScanPlugin = {
   id: 'storybook',
   canApply,
   rules: () => storybookRules,
+  packageType: () => 'storybook',
 }
 
 export default storybookPlugin

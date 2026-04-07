@@ -6,6 +6,7 @@ export const reactPlugin: ScanPlugin = {
   id: 'react',
   canApply,
   rules: () => reactRules,
+  packageType: () => 'react',
 }
 
 export default reactPlugin
