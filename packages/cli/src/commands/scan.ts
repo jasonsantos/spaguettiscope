@@ -103,6 +103,93 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
   })
   ruleSpinner.succeed(`Rules produced ${candidates.length} candidates`)
 
+  // Workspace-derived domain candidates
+  const DOMAIN_PREFIXES = [{ prefix: 'plugin-', separator: ':' }]
+
+  const workspaceDomainCandidates: Array<{
+    attributes: Record<string, string>
+    paths: string[]
+    source: string
+  }> = []
+  for (const pkg of packages) {
+    if (pkg.rel === '.') continue
+    const name = pkg.packageJson.name as string | undefined
+    if (!name) continue
+
+    const segment = name.includes('/') ? name.split('/').pop()! : name
+    let domain: string | undefined
+    let isProposed = true
+
+    for (const { prefix, separator } of DOMAIN_PREFIXES) {
+      if (segment.startsWith(prefix)) {
+        domain = `${prefix.slice(0, -1)}${separator}${segment.slice(prefix.length)}`
+        isProposed = false
+        break
+      }
+    }
+    if (!domain) domain = segment
+
+    const attrKey = isProposed ? 'domain?' : 'domain'
+    workspaceDomainCandidates.push({
+      attributes: { [attrKey]: domain },
+      paths: [`${pkg.rel}/**`],
+      source: `workspace:${name}`,
+    })
+  }
+
+  // Directory name heuristics for layer
+  const LAYER_DICTIONARY = new Map<string, string>([
+    ['components', 'component'],
+    ['ui', 'component'],
+    ['primitives', 'component'],
+    ['hooks', 'hook'],
+    ['utils', 'utility'],
+    ['helpers', 'utility'],
+    ['lib', 'utility'],
+    ['services', 'service'],
+    ['model', 'model'],
+    ['models', 'model'],
+    ['types', 'types'],
+    ['schemas', 'types'],
+    ['api', 'api'],
+    ['routes', 'api'],
+    ['middleware', 'middleware'],
+    ['views', 'view'],
+    ['controllers', 'controller'],
+    ['handlers', 'controller'],
+    ['adapters', 'adapter'],
+    ['connectors', 'adapter'],
+    ['renderer', 'renderer'],
+    ['renderers', 'renderer'],
+  ])
+
+  const layerHeuristicCandidates: Array<{
+    attributes: Record<string, string>
+    paths: string[]
+    source: string
+  }> = []
+  for (const pkg of packages) {
+    const prefix = pkg.rel === '.' ? 'src/' : `${pkg.rel}/src/`
+    const srcDirs = new Set<string>()
+    for (const f of allFiles) {
+      if (!f.startsWith(prefix)) continue
+      const rest = f.slice(prefix.length)
+      const slashIdx = rest.indexOf('/')
+      if (slashIdx === -1) continue
+      srcDirs.add(rest.slice(0, slashIdx))
+    }
+
+    for (const dirName of srcDirs) {
+      const layerValue = LAYER_DICTIONARY.get(dirName)
+      if (!layerValue) continue
+      layerHeuristicCandidates.push({
+        attributes: { 'layer?': layerValue },
+        paths: [`${prefix}${dirName}/**`],
+        source: 'built-in:layer:directory-heuristic',
+      })
+    }
+  }
+
   // 7. Merge skeleton
   const mergeSpinner = ora('Merging skeleton…').start()
   mkdirSync(dirname(skeletonPath), { recursive: true })
@@ -113,7 +200,11 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
   const existing = readSkeleton(skeletonPath)
   const { skeleton, added, unchanged, markedStale } = mergeSkeleton(
     existing,
-    candidates.map(c => ({ attributes: c.attributes, paths: [c.pathPattern], source: c.source })),
+    [
+      ...candidates.map(c => ({ attributes: c.attributes, paths: [c.pathPattern], source: c.source })),
+      ...workspaceDomainCandidates,
+      ...layerHeuristicCandidates,
+    ],
     allFiles
   )
   writeSkeleton(skeletonPath, skeleton)
