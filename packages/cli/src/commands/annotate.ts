@@ -8,7 +8,9 @@ export async function runAnnotateList(options: { projectRoot?: string } = {}): P
   const skeletonPath = resolve(projectRoot, config.skeleton)
   const skeleton = readSkeleton(skeletonPath)
 
-  const pending = skeleton.entries.filter(e => isDraft(e) && '?' in e.attributes)
+  const pending = skeleton.entries.filter(
+    e => isDraft(e) && Object.keys(e.attributes).some(k => k.endsWith('?'))
+  )
 
   if (pending.length === 0) {
     console.log('No pending annotations. Skeleton is fully resolved.')
@@ -18,10 +20,19 @@ export async function runAnnotateList(options: { projectRoot?: string } = {}): P
   console.log(`\n? entries requiring annotation (${pending.length}):\n`)
   for (let i = 0; i < pending.length; i++) {
     const entry = pending[i]
-    const value = entry.attributes['?']
     const paths = entry.paths.join(', ')
     const src = (entry as any).source ? `  (${(entry as any).source})` : ''
-    console.log(`  [${i + 1}] ? = "${value}"   ${paths}${src}`)
+
+    const proposedKeys = Object.keys(entry.attributes).filter(k => k.endsWith('?') && k !== '?')
+    if (proposedKeys.length > 0) {
+      const proposals = proposedKeys
+        .map(k => `${k.slice(0, -1)} = "${entry.attributes[k]}"`)
+        .join(', ')
+      console.log(`  [${i + 1}] ${proposals}   ${paths}${src}`)
+    } else {
+      const value = entry.attributes['?']
+      console.log(`  [${i + 1}] ? = "${value}"   ${paths}${src}`)
+    }
   }
   console.log()
 }
@@ -35,9 +46,7 @@ export interface ResolveOptions {
 }
 
 export async function runAnnotateResolve(options: ResolveOptions): Promise<void> {
-  if (!options.as) {
-    throw new Error('--as <dimension> is required for annotate resolve (e.g. --as domain)')
-  }
+  // --as is required for bare ? resolution, but not for key? confirmation with --all
   const projectRoot = options.projectRoot ?? process.cwd()
   const config = await loadConfig(projectRoot)
   const skeletonPath = resolve(projectRoot, config.skeleton)
@@ -56,7 +65,27 @@ export async function runAnnotateResolve(options: ResolveOptions): Promise<void>
 
   let resolved = 0
   const entries = skeleton.entries.map(entry => {
-    if (!isDraft(entry) || !('?' in entry.attributes)) return entry
+    if (!isDraft(entry)) return entry
+
+    const proposedKeys = Object.keys(entry.attributes).filter(k => k.endsWith('?') && k !== '?')
+
+    // Handle key? proposed entries: confirm all proposed dimensions
+    if (proposedKeys.length > 0 && options.all) {
+      const newAttributes: Record<string, string> = {}
+      for (const [k, v] of Object.entries(entry.attributes)) {
+        if (k.endsWith('?') && k !== '?') {
+          newAttributes[k.slice(0, -1)] = v // layer? → layer
+        } else {
+          newAttributes[k] = v
+        }
+      }
+      Object.assign(newAttributes, extraAttrs)
+      resolved++
+      return { attributes: newAttributes, paths: entry.paths }
+    }
+
+    // Handle bare ? entries (existing behavior)
+    if (!('?' in entry.attributes) || !options.as) return entry
 
     const uncertain = entry.attributes['?']
     const shouldResolve = options.all || options.values.includes(uncertain)
@@ -68,10 +97,9 @@ export async function runAnnotateResolve(options: ResolveOptions): Promise<void>
     Object.assign(newAttributes, extraAttrs)
 
     resolved++
-    // Remove draft flag — entry becomes resolved
     return { attributes: newAttributes, paths: entry.paths }
   })
 
-  writeSkeleton(skeletonPath, { entries })
+  writeSkeleton(skeletonPath, { ...skeleton, entries })
   printSuccess(`Resolved ${resolved} entr${resolved === 1 ? 'y' : 'ies'}`)
 }
