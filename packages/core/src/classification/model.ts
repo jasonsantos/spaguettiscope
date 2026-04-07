@@ -19,7 +19,7 @@ export interface DimensionDefinition {
   fallback?: DimensionValue;
 }
 
-export const BUILT_IN_DIMENSION_NAMES = ['role', 'domain', 'package'] as const;
+export const BUILT_IN_DIMENSION_NAMES = ['role', 'domain', 'package', 'layer'] as const;
 export type BuiltInDimensionName = (typeof BUILT_IN_DIMENSION_NAMES)[number];
 
 /** A user-configured rule mapping a glob pattern to a dimension value. */

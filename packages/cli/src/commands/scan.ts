@@ -8,6 +8,7 @@ import {
   mergeSkeleton,
   runRules,
   builtInRoleRules,
+  builtInSchemaRules,
   discoverWorkspaces,
   buildImportGraph,
   mergeImportGraphs,
@@ -95,7 +96,7 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
 
   // 6. Run rules (built-ins fire on all files; plugin rules are already scoped)
   const ruleSpinner = ora('Running rules…').start()
-  const allRules = [...builtInRoleRules, ...pluginRules]
+  const allRules = [...builtInRoleRules, ...builtInSchemaRules, ...pluginRules]
   const candidates = runRules(allFiles, allRules, projectRoot, {
     disabledRuleIds,
     importGraph,
