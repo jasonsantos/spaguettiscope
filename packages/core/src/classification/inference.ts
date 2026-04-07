@@ -16,7 +16,7 @@ export class InferenceEngine {
 
   constructor(
     private readonly definitions: DimensionDefinition[],
-    private readonly projectRoot: string = process.cwd(),
+    readonly projectRoot: string = process.cwd(),
     private readonly userRules: Record<string, InferenceRule[]> = {}
   ) {}
 

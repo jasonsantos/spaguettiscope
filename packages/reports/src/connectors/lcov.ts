@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { basename } from 'node:path'
+import { basename, dirname, isAbsolute, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { ConnectorConfig, InferenceEngine } from '@spaguettiscope/core'
 import type { Connector, ConnectorCategory } from './interface.js'
@@ -56,7 +56,19 @@ export class LcovConnector implements Connector {
     const runAt = new Date().toISOString()
     const records: NormalizedRunRecord[] = []
 
+    // Resolve relative SF: paths to absolute paths so the inference engine can correctly
+    // identify package and other dimensions. Resolution order:
+    //   1. config.packageRoot (relative to engine.projectRoot, or absolute) — most explicit
+    //   2. The directory containing the lcov file — reasonable default when co-located
+    const rawPackageRoot = typeof cfg.packageRoot === 'string' ? cfg.packageRoot : null
+    const resolvedPackageRoot = rawPackageRoot
+      ? resolve(engine.projectRoot, rawPackageRoot)
+      : dirname(resolve(lcovFile))
+
     for (const lcov of lcovRecords) {
+      const absSourceFile = isAbsolute(lcov.sourceFile)
+        ? lcov.sourceFile
+        : resolve(resolvedPackageRoot, lcov.sourceFile)
       let status: TestStatus
       if (lcov.linesFound === 0) {
         status = 'skipped'
@@ -65,18 +77,18 @@ export class LcovConnector implements Connector {
         status = pct >= threshold ? 'passed' : 'failed'
       }
 
-      const dimensions = engine.infer(lcov.sourceFile)
+      const dimensions = engine.infer(absSourceFile)
 
       records.push({
         id: randomUUID(),
         connectorId: this.id,
         runAt,
-        name: basename(lcov.sourceFile),
-        fullName: lcov.sourceFile,
+        name: basename(absSourceFile),
+        fullName: absSourceFile,
         status,
         duration: 0,
         dimensions,
-        source: { file: lcov.sourceFile, connectorId: this.id },
+        source: { file: absSourceFile, connectorId: this.id },
         metadata: {
           linesFound: lcov.linesFound,
           linesHit: lcov.linesHit,

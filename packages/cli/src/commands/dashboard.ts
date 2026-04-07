@@ -79,6 +79,7 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
   const config = await loadConfig(projectRoot)
   spinner.succeed('Configuration loaded')
 
+  const activeConnectorIds = [...new Set(config.dashboard.connectors.map(c => c.id))]
   const engine = new InferenceEngine(defaultDefinitions, projectRoot, config.inference ?? {})
   const records: NormalizedRunRecord[] = []
 
@@ -155,16 +156,20 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
           for (const importedFile of imports) {
             try {
               const attrs = matchFile(join(projectRoot, importedFile), skeleton, projectRoot)
+              // Don't inherit role:test from imported files — only non-test roles are meaningful
+              if (attrs['role'] === 'test') delete attrs['role']
               Object.assign(inherited, attrs)
             } catch {
               continue
             }
           }
 
-          // Non-overwrite: direct skeleton annotation wins; inference-set dims may be overridden
+          // role always inherits from the import target (that's the whole point of this pass —
+          // a test file for a library module should appear under role:library, not role:test).
+          // All other dimensions: direct skeleton annotation wins over inherited values.
           const skeletonKeys = skeletonSetKeys.get(record) ?? new Set<string>()
           for (const [k, v] of Object.entries(inherited)) {
-            if (!skeletonKeys.has(k)) {
+            if (k === 'role' || !skeletonKeys.has(k)) {
               record.dimensions[k] = v
             }
           }
@@ -184,7 +189,7 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
   const historyPath = resolve(projectRoot, config.dashboard.historyFile)
   await appendHistory(historyPath, {
     runAt: new Date().toISOString(),
-    connectors: config.dashboard.connectors.map(c => c.id),
+    connectors: activeConnectorIds,
     overall: aggregated.overall,
     dimensionSummary: Object.fromEntries(
       Object.entries(aggregated)
@@ -206,7 +211,8 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
     const dashboardData: DashboardData = {
       generatedAt: new Date().toISOString(),
       projectName: config.name,
-      connectors: config.dashboard.connectors.map(c => c.id),
+      projectRoot,
+      connectors: activeConnectorIds,
       overall: aggregated.overall,
       dimensions: Object.fromEntries(
         Object.entries(aggregated)
@@ -294,7 +300,7 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
   // Always print terminal summary
   const summary = formatTerminalSummary(aggregated, {
     projectName: config.name,
-    connectors: config.dashboard.connectors.map(c => c.id),
+    connectors: activeConnectorIds,
   })
   printBox(summary)
 }

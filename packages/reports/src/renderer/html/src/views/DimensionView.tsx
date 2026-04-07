@@ -1,6 +1,6 @@
 // DimensionView.tsx — paginated suite list filtered by a single dimension tag.
 import React from 'react';
-import { C, fmt, hue, covColor } from '../shared.tsx';
+import { C, fmt, passRateHealth } from '../shared.tsx';
 import { SuiteTree } from './SuiteTree.tsx';
 import type { SuiteInfo } from '../derive.ts';
 
@@ -21,9 +21,8 @@ export function DimensionView({ dim, val, allSuites }: DimensionViewProps) {
   const totalFailed = matched.reduce((n, s) => n + s.tests.filter(t => t.status === 'failed').length, 0);
   const overallRate = totalTests > 0 ? totalPassed / totalTests : 1;
 
-  const rateColor = hue(overallRate);
-  const rateBg    = overallRate >= 1.0 ? C.passedBg : overallRate >= 0.9 ? C.warningBg : C.failedBg;
-  const rateChip  = overallRate >= 1.0 ? '✓ All passing' : overallRate >= 0.9 ? '⚠ Some failures' : '✕ Failures';
+  const h = passRateHealth(overallRate);
+  const { accent: rateColor, bg: rateBg, chip: rateChip } = h;
 
   return (
     <div>

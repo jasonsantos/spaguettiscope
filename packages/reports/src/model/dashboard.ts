@@ -4,6 +4,7 @@ import type { HistoryEntry } from './history.js'
 export interface DashboardData {
   generatedAt: string
   projectName?: string
+  projectRoot?: string
   connectors: string[]
   overall: OverallSummary
   dimensions: Record<string, AggregatedSlice[]>

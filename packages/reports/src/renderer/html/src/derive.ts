@@ -34,6 +34,8 @@ export interface RawConnectorAggregation {
 export interface RawSummary {
   generatedAt: string;
   projectName?: string;
+  /** Absolute path of the project root — used to display relative file paths */
+  projectRoot?: string;
   connectors: string[];
   overall: RawOverall;
   dimensions: Record<string, RawSlice[]>;
@@ -105,7 +107,8 @@ export interface PackageInfo {
   failed: number;
   skipped: number;
   broken: number;
-  passRate: number;
+  /** null when there are no test records for this package (coverage-only packages) */
+  passRate: number | null;
   /** LCov passRate for this package (fraction of covered files) */
   coverage: number;
   findings: FindingsCount;
@@ -136,6 +139,23 @@ export interface SuiteInfo {
   /** 0–1 from lcov if available, null otherwise */
   coverage: number | null;
   tests: TestInfo[];
+}
+
+// ─── Testing-only overall ─────────────────────────────────────────────────────
+/** Aggregate pass/fail counts across testing-category connectors only (excludes lcov/eslint/typescript). */
+export function deriveTestingOverall(summary: RawSummary): {
+  passed: number; failed: number; broken: number; skipped: number; total: number; passRate: number;
+} {
+  const acc = { passed: 0, failed: 0, broken: 0, skipped: 0, total: 0 };
+  for (const conn of Object.values(summary.byConnector)) {
+    if (conn.category !== 'testing') continue;
+    acc.passed  += conn.overall.passed;
+    acc.failed  += conn.overall.failed;
+    acc.broken  += conn.overall.broken;
+    acc.skipped += conn.overall.skipped;
+    acc.total   += conn.overall.total;
+  }
+  return { ...acc, passRate: acc.total > 0 ? acc.passed / acc.total : 1 };
 }
 
 // ─── Derivation ───────────────────────────────────────────────────────────────
@@ -243,7 +263,7 @@ export function derivePackages(summary: RawSummary, findings: RawFinding[]): Pac
         failed:   t.failed,
         skipped:  t.skipped,
         broken:   t.broken,
-        passRate: t.total > 0 ? t.passed / t.total : 1,
+        passRate: t.total > 0 ? t.passed / t.total : null,
         coverage: coverageByPkg.get(name) ?? 0,
         findings: findingsByPkg.get(name) ?? { error: 0, warning: 0, info: 0 },
       };
@@ -256,14 +276,23 @@ export function derivePackages(summary: RawSummary, findings: RawFinding[]): Pac
  * Groups records by source.file (testing connectors only).
  * Attempts to match each test file to an lcov coverage record.
  */
-export function deriveSuites(records: RawRecord[]): SuiteInfo[] {
-  // Build coverage map: source-file path → covered?
-  const coverageByFile = new Map<string, boolean>();
+export function deriveSuites(records: RawRecord[], projectRoot?: string): SuiteInfo[] {
+  // Build coverage map: source-file path → coverage fraction (0–1)
+  const coverageByFile = new Map<string, number>();
+  const covSumByPkg = new Map<string, { sum: number; count: number }>();
   for (const r of records) {
     if (r.connectorId === 'lcov') {
-      coverageByFile.set(r.source.file, r.status === 'passed');
+      const rawPct = r.metadata?.['coveragePct'];
+      const frac = typeof rawPct === 'number' ? rawPct / 100 : (r.status === 'passed' ? 1 : 0);
+      coverageByFile.set(r.source.file, frac);
+      const pkg = r.dimensions['package'] ?? 'unknown';
+      const prev = covSumByPkg.get(pkg) ?? { sum: 0, count: 0 };
+      covSumByPkg.set(pkg, { sum: prev.sum + frac, count: prev.count + 1 });
     }
   }
+  const coverageByPkg = new Map<string, number>(
+    Array.from(covSumByPkg.entries()).map(([k, v]) => [k, v.count > 0 ? v.sum / v.count : 0])
+  );
 
   // Only testing records
   const testRecords = records.filter(r => {
@@ -285,12 +314,18 @@ export function deriveSuites(records: RawRecord[]): SuiteInfo[] {
     // Heuristic: strip .test./.spec. suffix to find the source file
     const sourceFile = file.replace(/\.(test|spec)(\.(ts|tsx|js|jsx|mts|cts))$/, '$2');
     const covEntry = coverageByFile.get(sourceFile);
-    const coverage = covEntry !== undefined ? (covEntry ? 1 : 0) : null;
+    const pkg = first.dimensions['package'] ?? 'unknown';
+    const coverage = covEntry !== undefined ? covEntry : (coverageByPkg.get(pkg) ?? null);
+
+    // Relativize file path when projectRoot is available
+    const displayFile = projectRoot && file.startsWith(projectRoot)
+      ? file.slice(projectRoot.length).replace(/^\//, '')
+      : file;
 
     return {
       name:     suiteName(file),
-      file,
-      pkg:    first.dimensions['package'] ?? 'unknown',
+      file:     displayFile,
+      pkg,
       role:   first.dimensions['role']    ?? 'unknown',
       domain: first.dimensions['domain']  ?? 'unknown',
       layer:  first.dimensions['layer']   ?? 'unknown',
