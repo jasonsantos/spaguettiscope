@@ -12,8 +12,10 @@ import {
   discoverWorkspaces,
   buildImportGraph,
   mergeImportGraphs,
+  analyzeLayerDirections,
   type ScanPlugin,
   type Rule,
+  type LayerPolicyEdge,
 } from '@spaguettiscope/core'
 import { walkFiles } from '../utils/files.js'
 import { printSuccess } from '../formatter/index.js'
@@ -190,7 +192,22 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
     }
   }
 
-  // 7. Merge skeleton
+  // 7. Import direction analysis for layer policy
+  const layerPolicySpinner = ora('Analyzing import directions…').start()
+  const proposedLayerPolicy: Record<string, LayerPolicyEdge[]> = {}
+
+  for (const pkg of packages) {
+    const pkgFiles = filesByPackage.get(pkg.rel) ?? []
+    const edges = analyzeLayerDirections(importGraph, pkg.rel, pkgFiles)
+    if (edges.length > 0) {
+      proposedLayerPolicy[pkg.rel] = edges
+    }
+  }
+  layerPolicySpinner.succeed(
+    `Layer policy: ${Object.keys(proposedLayerPolicy).length} packages analyzed`
+  )
+
+  // 8. Merge skeleton
   const mergeSpinner = ora('Merging skeleton…').start()
   mkdirSync(dirname(skeletonPath), { recursive: true })
   const spascoGitignore = resolve(projectRoot, '.spasco', '.gitignore')
@@ -198,7 +215,7 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
     writeFileSync(spascoGitignore, 'reports/\nintermediates.json\n')
   }
   const existing = readSkeleton(skeletonPath)
-  const { skeleton, added, unchanged, markedStale } = mergeSkeleton(
+  const mergeResult = mergeSkeleton(
     existing,
     [
       ...candidates.map(c => ({ attributes: c.attributes, paths: [c.pathPattern], source: c.source })),
@@ -207,6 +224,17 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
     ],
     allFiles
   )
+  const skeleton = mergeResult.skeleton
+  const { added, unchanged, markedStale } = mergeResult
+
+  // Apply proposed layer policy
+  if (Object.keys(proposedLayerPolicy).length > 0) {
+    if (!skeleton.layerPolicy || skeleton.layerPolicyDraft) {
+      skeleton.layerPolicy = proposedLayerPolicy
+      skeleton.layerPolicyDraft = true
+    }
+  }
+
   writeSkeleton(skeletonPath, skeleton)
   mergeSpinner.succeed('Skeleton updated')
 
