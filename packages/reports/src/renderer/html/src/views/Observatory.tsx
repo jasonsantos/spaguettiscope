@@ -220,9 +220,11 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
 
   const trend = history.slice(-20).map((h, i) => ({
     i,
-    passRate: h.overall.passRate,
-    total: h.overall.total,
+    passRate: h.testPassRate ?? h.overall.passRate,
+    coverage: h.coveragePassRate,
+    total:    h.overall.total,
   }));
+  const hasCoverageTrend = trend.some(t => t.coverage !== undefined);
   const avgCoverage = byConnector['lcov']?.overall.passRate ?? 0;
   const testingOverall = deriveTestingOverall(summary);
 
@@ -333,6 +335,30 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
                   />
                 </AreaChart>
               </ResponsiveContainer>
+
+              {/* Coverage sparkline — only shown once at least one run has lcov data */}
+              {hasCoverageTrend && (
+                <>
+                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, marginTop: 14 }}>Coverage</div>
+                  <ResponsiveContainer width="100%" height={56}>
+                    <AreaChart data={trend}>
+                      <defs>
+                        <linearGradient id={`${gradId}-cov`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor={C.coverage} stopOpacity={0.25} />
+                          <stop offset="95%"  stopColor={C.coverage} stopOpacity={0}    />
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="coverage" stroke={C.coverage} strokeWidth={2}
+                        fill={`url(#${gradId}-cov)`} dot={false} connectNulls={false} />
+                      <Tooltip
+                        contentStyle={{ background: C.surfaceHigh, border: `1px solid ${C.border}`, fontSize: 11, borderRadius: 8 }}
+                        formatter={(v: unknown) => v !== undefined ? [fmt(v as number), 'coverage'] : []}
+                        labelFormatter={() => ''}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </>
+              )}
             </div>
           )}
 

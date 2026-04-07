@@ -13,6 +13,10 @@ export interface HistoryEntry {
   connectors: string[];
   overall: OverallSummary;
   dimensionSummary: Record<string, Record<string, HistoryDimensionSlice>>;
+  /** Pass rate from testing-category connectors only (vitest, playwright, allure) */
+  testPassRate?: number;
+  /** Pass rate from the lcov coverage connector (fraction of files meeting threshold) */
+  coveragePassRate?: number;
 }
 
 export async function appendHistory(filePath: string, entry: HistoryEntry): Promise<void> {

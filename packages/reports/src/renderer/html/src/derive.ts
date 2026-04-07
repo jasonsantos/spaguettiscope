@@ -44,6 +44,8 @@ export interface RawSummary {
     connectors: string[];
     overall: RawOverall;
     dimensionSummary: Record<string, Record<string, { total: number; passed: number; failed: number }>>;
+    testPassRate?: number;
+    coveragePassRate?: number;
   }>;
   byConnector: Record<string, RawConnectorAggregation>;
   /**

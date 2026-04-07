@@ -186,11 +186,24 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
   const outputDir = resolve(projectRoot, options.output ?? config.dashboard.outputDir)
   mkdirSync(outputDir, { recursive: true })
 
+  // Compute per-category pass rates for the trend chart
+  const connectorCategoryMap = Object.fromEntries(CONNECTORS.map(c => [c.id, c.category]))
+  const testingRecs  = records.filter(r => connectorCategoryMap[r.connectorId] === 'testing')
+  const coverageRecs = records.filter(r => r.connectorId === 'lcov')
+  const testPassRate = testingRecs.length > 0
+    ? testingRecs.filter(r => r.status === 'passed').length / testingRecs.length
+    : undefined
+  const coveragePassRate = coverageRecs.length > 0
+    ? coverageRecs.filter(r => r.status === 'passed').length / coverageRecs.length
+    : undefined
+
   const historyPath = resolve(projectRoot, config.dashboard.historyFile)
   await appendHistory(historyPath, {
     runAt: new Date().toISOString(),
     connectors: activeConnectorIds,
     overall: aggregated.overall,
+    testPassRate,
+    coveragePassRate,
     dimensionSummary: Object.fromEntries(
       Object.entries(aggregated)
         .filter(([k]) => k !== 'overall')
