@@ -7,12 +7,19 @@ export interface ImportGraph {
   imports: Map<string, Set<string>>
   /** reverse index: rel-to-projectRoot → Set of files that import it */
   importedBy: Map<string, Set<string>>
+  /** Subset of imports where ALL imports from source→target are type-only */
+  typeOnlyImports: Map<string, Set<string>>
 }
 
 type AstNode = { type: string; [key: string]: unknown }
 
-function extractSpecifiers(code: string, isJsx: boolean): string[] {
-  const specifiers: string[] = []
+interface SpecifierInfo {
+  specifier: string
+  typeOnly: boolean
+}
+
+function extractSpecifiers(code: string, isJsx: boolean): SpecifierInfo[] {
+  const specifiers: SpecifierInfo[] = []
   let program: { body: AstNode[] }
 
   try {
@@ -29,27 +36,52 @@ function extractSpecifiers(code: string, isJsx: boolean): string[] {
     if (!node || typeof node.type !== 'string') return
 
     if (
-      (node.type === 'ImportDeclaration' ||
-        node.type === 'ExportAllDeclaration') &&
+      node.type === 'ImportDeclaration' &&
       (node.source as AstNode)?.type === 'Literal'
     ) {
-      specifiers.push((node.source as { value: string }).value)
+      const specifier = (node.source as { value: string }).value
+      // typeOnly if the import declaration itself is `import type`, OR if all specifiers have importKind === 'type'
+      let typeOnly = node.importKind === 'type'
+      if (!typeOnly) {
+        const nodeSpecifiers = node.specifiers as AstNode[]
+        if (Array.isArray(nodeSpecifiers) && nodeSpecifiers.length > 0) {
+          typeOnly = nodeSpecifiers.every(s => (s as { importKind?: string }).importKind === 'type')
+        }
+      }
+      specifiers.push({ specifier, typeOnly })
+    } else if (
+      node.type === 'ExportAllDeclaration' &&
+      (node.source as AstNode)?.type === 'Literal'
+    ) {
+      specifiers.push({
+        specifier: (node.source as { value: string }).value,
+        typeOnly: node.exportKind === 'type',
+      })
     } else if (
       node.type === 'ExportNamedDeclaration' &&
       node.source != null &&
       (node.source as AstNode).type === 'Literal'
     ) {
-      specifiers.push((node.source as { value: string }).value)
+      specifiers.push({
+        specifier: (node.source as { value: string }).value,
+        typeOnly: node.exportKind === 'type',
+      })
     } else if (
       node.type === 'ImportExpression' &&
       (node.source as AstNode)?.type === 'Literal'
     ) {
-      specifiers.push((node.source as { value: string }).value)
+      specifiers.push({
+        specifier: (node.source as { value: string }).value,
+        typeOnly: false,
+      })
     } else if (
       node.type === 'TSImportType' &&
-      (node.argument as AstNode)?.type === 'Literal'
+      (node.source as AstNode)?.type === 'Literal'
     ) {
-      specifiers.push((node.argument as { value: string }).value)
+      specifiers.push({
+        specifier: (node.source as { value: string }).value,
+        typeOnly: true,
+      })
     } else if (
       node.type === 'CallExpression' &&
       (node.callee as AstNode)?.type === 'Identifier' &&
@@ -58,7 +90,7 @@ function extractSpecifiers(code: string, isJsx: boolean): string[] {
       const args = node.arguments as AstNode[]
       if (args?.[0]?.type === 'Literal') {
         const val = (args[0] as unknown as { value: unknown }).value
-        if (typeof val === 'string') specifiers.push(val)
+        if (typeof val === 'string') specifiers.push({ specifier: val, typeOnly: false })
       }
     }
 
@@ -122,7 +154,7 @@ export function buildImportGraph(
   filePaths: string[],  // relative to projectRoot
   projectRoot: string
 ): ImportGraph {
-  const graph: ImportGraph = { imports: new Map(), importedBy: new Map() }
+  const graph: ImportGraph = { imports: new Map(), importedBy: new Map(), typeOnlyImports: new Map() }
 
   for (const relPath of filePaths) {
     const dotIdx = relPath.lastIndexOf('.')
@@ -143,8 +175,11 @@ export function buildImportGraph(
       continue
     }
 
-    for (const spec of extractSpecifiers(code, isJsx)) {
-      const resolved = resolveSpecifier(spec, absPath, packageRoot, projectRoot)
+    // Track per-target whether it's typeOnly; concrete wins over typeOnly for the same target
+    const targetTypeOnly = new Map<string, boolean>()
+
+    for (const { specifier, typeOnly } of extractSpecifiers(code, isJsx)) {
+      const resolved = resolveSpecifier(specifier, absPath, packageRoot, projectRoot)
       if (!resolved) continue
 
       graph.imports.get(relPath)!.add(resolved)
@@ -153,6 +188,23 @@ export function buildImportGraph(
         graph.importedBy.set(resolved, new Set())
       }
       graph.importedBy.get(resolved)!.add(relPath)
+
+      // concrete wins: if we've already seen a concrete edge, stay concrete
+      if (targetTypeOnly.has(resolved)) {
+        if (!typeOnly) targetTypeOnly.set(resolved, false)
+      } else {
+        targetTypeOnly.set(resolved, typeOnly)
+      }
+    }
+
+    // Populate typeOnlyImports for this file
+    for (const [target, isTypeOnly] of targetTypeOnly) {
+      if (isTypeOnly) {
+        if (!graph.typeOnlyImports.has(relPath)) {
+          graph.typeOnlyImports.set(relPath, new Set())
+        }
+        graph.typeOnlyImports.get(relPath)!.add(target)
+      }
     }
   }
 
@@ -160,7 +212,7 @@ export function buildImportGraph(
 }
 
 export function mergeImportGraphs(graphs: ImportGraph[]): ImportGraph {
-  const merged: ImportGraph = { imports: new Map(), importedBy: new Map() }
+  const merged: ImportGraph = { imports: new Map(), importedBy: new Map(), typeOnlyImports: new Map() }
 
   for (const g of graphs) {
     for (const [k, v] of g.imports) {
@@ -170,6 +222,35 @@ export function mergeImportGraphs(graphs: ImportGraph[]): ImportGraph {
     for (const [k, v] of g.importedBy) {
       if (!merged.importedBy.has(k)) merged.importedBy.set(k, new Set())
       for (const dep of v) merged.importedBy.get(k)!.add(dep)
+    }
+  }
+
+  // An edge is typeOnly in merged only if it's typeOnly in every graph that contains it.
+  // Two-pass: collect all typeOnly edges, then demote any that are concrete in any graph.
+  const candidateTypeOnly = new Map<string, Set<string>>()
+  for (const g of graphs) {
+    for (const [src, targets] of g.typeOnlyImports) {
+      if (!candidateTypeOnly.has(src)) candidateTypeOnly.set(src, new Set())
+      for (const tgt of targets) candidateTypeOnly.get(src)!.add(tgt)
+    }
+  }
+
+  // Demote: remove any edge that is concrete (present in imports but NOT in typeOnlyImports) in any graph
+  for (const g of graphs) {
+    for (const [src, targets] of g.imports) {
+      for (const tgt of targets) {
+        const isTypeOnlyInThisGraph = g.typeOnlyImports.get(src)?.has(tgt) ?? false
+        if (!isTypeOnlyInThisGraph) {
+          // This edge is concrete in this graph — demote from candidates
+          candidateTypeOnly.get(src)?.delete(tgt)
+        }
+      }
+    }
+  }
+
+  for (const [src, targets] of candidateTypeOnly) {
+    if (targets.size > 0) {
+      merged.typeOnlyImports.set(src, new Set(targets))
     }
   }
 

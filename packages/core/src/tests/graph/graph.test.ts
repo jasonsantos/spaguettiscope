@@ -101,6 +101,66 @@ describe('buildImportGraph', () => {
 
     expect(graph.imports.get('src/a.ts')).toContain('src/b.ts')
   })
+
+  it('marks import type as typeOnly edge', () => {
+    write('src/a.ts', "import type { Foo } from './b'")
+    write('src/b.ts', 'export type Foo = string')
+    const graph = buildImportGraph(dir, ['src/a.ts', 'src/b.ts'], dir)
+    expect(graph.imports.get('src/a.ts')).toContain('src/b.ts')
+    expect(graph.typeOnlyImports.get('src/a.ts')).toContain('src/b.ts')
+  })
+
+  it('marks inline type specifiers as typeOnly when all are type', () => {
+    write('src/a.ts', "import { type Foo, type Bar } from './b'")
+    write('src/b.ts', 'export type Foo = string\nexport type Bar = number')
+    const graph = buildImportGraph(dir, ['src/a.ts', 'src/b.ts'], dir)
+    expect(graph.typeOnlyImports.get('src/a.ts')).toContain('src/b.ts')
+  })
+
+  it('marks edge as concrete when mixed type and value imports', () => {
+    write('src/a.ts', "import { type Foo, bar } from './b'")
+    write('src/b.ts', 'export type Foo = string\nexport const bar = 1')
+    const graph = buildImportGraph(dir, ['src/a.ts', 'src/b.ts'], dir)
+    expect(graph.imports.get('src/a.ts')).toContain('src/b.ts')
+    expect(graph.typeOnlyImports.get('src/a.ts') ?? new Set()).not.toContain('src/b.ts')
+  })
+
+  it('concrete wins when same specifier has both type and value import', () => {
+    write('src/a.ts', "import type { Foo } from './b'\nimport { bar } from './b'")
+    write('src/b.ts', 'export type Foo = string\nexport const bar = 1')
+    const graph = buildImportGraph(dir, ['src/a.ts', 'src/b.ts'], dir)
+    expect(graph.imports.get('src/a.ts')).toContain('src/b.ts')
+    expect(graph.typeOnlyImports.get('src/a.ts') ?? new Set()).not.toContain('src/b.ts')
+  })
+
+  it('export type is typeOnly', () => {
+    write('src/a.ts', "export type { Foo } from './b'")
+    write('src/b.ts', 'export type Foo = string')
+    const graph = buildImportGraph(dir, ['src/a.ts', 'src/b.ts'], dir)
+    expect(graph.typeOnlyImports.get('src/a.ts')).toContain('src/b.ts')
+  })
+
+  it('TSImportType is typeOnly', () => {
+    write('src/a.ts', "type X = import('./b').Foo")
+    write('src/b.ts', 'export type Foo = string')
+    const graph = buildImportGraph(dir, ['src/a.ts', 'src/b.ts'], dir)
+    expect(graph.typeOnlyImports.get('src/a.ts')).toContain('src/b.ts')
+  })
+
+  it('require() is always concrete', () => {
+    write('src/a.js', "const b = require('./b')")
+    write('src/b.js', 'module.exports = {}')
+    const graph = buildImportGraph(dir, ['src/a.js', 'src/b.js'], dir)
+    expect(graph.imports.get('src/a.js')).toContain('src/b.js')
+    expect(graph.typeOnlyImports.get('src/a.js') ?? new Set()).not.toContain('src/b.js')
+  })
+
+  it('dynamic import() is always concrete', () => {
+    write('src/a.ts', "const mod = import('./b')")
+    write('src/b.ts', 'export const b = 2')
+    const graph = buildImportGraph(dir, ['src/a.ts', 'src/b.ts'], dir)
+    expect(graph.typeOnlyImports.get('src/a.ts') ?? new Set()).not.toContain('src/b.ts')
+  })
 })
 
 describe('mergeImportGraphs', () => {
@@ -108,10 +168,12 @@ describe('mergeImportGraphs', () => {
     const g1 = {
       imports: new Map([['a.ts', new Set(['b.ts'])]]),
       importedBy: new Map([['b.ts', new Set(['a.ts'])]]),
+      typeOnlyImports: new Map(),
     }
     const g2 = {
       imports: new Map([['c.ts', new Set(['d.ts'])]]),
       importedBy: new Map([['d.ts', new Set(['c.ts'])]]),
+      typeOnlyImports: new Map(),
     }
 
     const merged = mergeImportGraphs([g1, g2])
@@ -124,15 +186,49 @@ describe('mergeImportGraphs', () => {
     const g1 = {
       imports: new Map([['a.ts', new Set(['b.ts'])]]),
       importedBy: new Map([['b.ts', new Set(['a.ts'])]]),
+      typeOnlyImports: new Map(),
     }
     const g2 = {
       imports: new Map([['a.ts', new Set(['c.ts'])]]),
       importedBy: new Map([['c.ts', new Set(['a.ts'])]]),
+      typeOnlyImports: new Map(),
     }
 
     const merged = mergeImportGraphs([g1, g2])
 
     expect(merged.imports.get('a.ts')).toContain('b.ts')
     expect(merged.imports.get('a.ts')).toContain('c.ts')
+  })
+
+  it('merges typeOnlyImports across graphs', () => {
+    const g1 = {
+      imports: new Map([['a.ts', new Set(['b.ts'])]]),
+      importedBy: new Map([['b.ts', new Set(['a.ts'])]]),
+      typeOnlyImports: new Map([['a.ts', new Set(['b.ts'])]]),
+    }
+    const g2 = {
+      imports: new Map([['c.ts', new Set(['d.ts'])]]),
+      importedBy: new Map([['d.ts', new Set(['c.ts'])]]),
+      typeOnlyImports: new Map([['c.ts', new Set(['d.ts'])]]),
+    }
+    const merged = mergeImportGraphs([g1, g2])
+    expect(merged.typeOnlyImports.get('a.ts')).toContain('b.ts')
+    expect(merged.typeOnlyImports.get('c.ts')).toContain('d.ts')
+  })
+
+  it('demotes typeOnly to concrete when merging graphs with conflicting edge types', () => {
+    const g1 = {
+      imports: new Map([['a.ts', new Set(['b.ts'])]]),
+      importedBy: new Map([['b.ts', new Set(['a.ts'])]]),
+      typeOnlyImports: new Map([['a.ts', new Set(['b.ts'])]]),
+    }
+    const g2 = {
+      imports: new Map([['a.ts', new Set(['b.ts'])]]),
+      importedBy: new Map([['b.ts', new Set(['a.ts'])]]),
+      typeOnlyImports: new Map(),
+    }
+    const merged = mergeImportGraphs([g1, g2])
+    expect(merged.imports.get('a.ts')).toContain('b.ts')
+    expect(merged.typeOnlyImports.get('a.ts') ?? new Set()).not.toContain('b.ts')
   })
 })
