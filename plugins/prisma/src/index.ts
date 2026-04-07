@@ -1,4 +1,4 @@
-import type { ScanPlugin } from '@spaguettiscope/core'
+import type { ScanPlugin, PluginDetector } from '@spaguettiscope/core'
 import { canApply } from './detect.js'
 import { prismaRules } from './rules.js'
 
@@ -7,6 +7,11 @@ export const prismaPlugin: ScanPlugin = {
   canApply,
   rules: () => prismaRules,
   packageType: () => 'prisma',
+}
+
+export const detector: PluginDetector = {
+  id: 'prisma',
+  detect: canApply,
 }
 
 export default prismaPlugin

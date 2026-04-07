@@ -1,4 +1,4 @@
-import type { ScanPlugin } from '@spaguettiscope/core'
+import type { ScanPlugin, PluginDetector } from '@spaguettiscope/core'
 import { canApply } from './detect.js'
 import { nextjsRules } from './rules.js'
 
@@ -7,6 +7,11 @@ export const nextjsPlugin: ScanPlugin = {
   canApply,
   rules: () => nextjsRules,
   packageType: () => 'nextjs',
+}
+
+export const detector: PluginDetector = {
+  id: 'nextjs',
+  detect: canApply,
 }
 
 export default nextjsPlugin
