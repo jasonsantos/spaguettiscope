@@ -76,6 +76,49 @@ const THEME_LABELS: Record<ThemeMode, string> = {
   light:  'Light',
 };
 
+// ─── Noodle plate logo — dense close-up of thick curving noodle segments ─────
+const NOODLE_COLORS = ['#FFD54F', '#FFCA28', '#FFB300', '#FFA726', '#FF9800'];
+
+function NoodleLogo({ size = 32, glow = 'transparent' }: { size?: number; glow?: string }) {
+  const rows = [
+    // [startX, startY, endX, endY] — each segment is a U-curve between two points
+    // Row 1: crests
+    [-2, 6, 18, 20], [18, 20, 38, 6], [38, 6, 58, 20], [58, 20, 78, 6],
+    // Row 2: troughs (offset half-phase)
+    [-10, 20, 10, 34], [10, 34, 30, 20], [30, 20, 50, 34], [50, 34, 70, 20],
+    // Row 3: crests
+    [-2, 34, 18, 48], [18, 48, 38, 34], [38, 34, 58, 48], [58, 48, 78, 34],
+    // Row 4: troughs
+    [-10, 48, 10, 62], [10, 62, 30, 48], [30, 48, 50, 62], [50, 62, 70, 48],
+  ];
+
+  return (
+    <svg
+      width={size} height={size} viewBox="0 0 64 64"
+      style={{ flexShrink: 0, filter: `drop-shadow(0 0 6px ${glow})` }}
+      aria-label="SpaguettiScope logo"
+    >
+      <rect x="2" y="2" width="60" height="60" rx="10" ry="10"
+        fill="none" stroke="#666" strokeWidth="1.5" opacity="0.35" />
+      <defs>
+        <clipPath id="plate-clip">
+          <rect x="3" y="3" width="58" height="58" rx="9" ry="9" />
+        </clipPath>
+      </defs>
+      <g clipPath="url(#plate-clip)" fill="none" strokeLinecap="round">
+        {rows.map(([x1, y1, x2, y2], i) => (
+          <path
+            key={i}
+            d={`M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}`}
+            stroke={NOODLE_COLORS[i % NOODLE_COLORS.length]}
+            strokeWidth="4.5"
+          />
+        ))}
+      </g>
+    </svg>
+  );
+}
+
 // ─── Navigation state ─────────────────────────────────────────────────────────
 type Drill =
   | null
@@ -219,16 +262,7 @@ export function App() {
         padding: '18px 32px', borderBottom: `1px solid ${C.border}`,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 10,
-            background: `linear-gradient(135deg, ${C.accent}, ${C.coverage})`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 15, fontWeight: 800,
-            color: '#fff', /* intentional pure white — max contrast on gradient */
-            flexShrink: 0,
-            userSelect: 'none',
-            boxShadow: `0 0 14px ${alpha(C.accent, 33)}`,
-          }}>S</div>
+          <NoodleLogo size={32} glow={alpha(C.accent, 33)} />
           <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em' }}>
             SpaguettiScope
           </span>

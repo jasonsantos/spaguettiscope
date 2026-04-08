@@ -1,9 +1,10 @@
 import { resolve } from 'node:path'
 import { loadConfig, readSkeleton, writeSkeleton, isDraft } from '@spaguettiscope/core'
-import { printSuccess } from '../formatter/index.js'
+import { printSuccess, printCommandHeader } from '../formatter/index.js'
 import { annotateListGuidance, annotateResolveGuidance } from '../formatter/guidance.js'
 
 export async function runAnnotateList(options: { projectRoot?: string } = {}): Promise<void> {
+  printCommandHeader('annotate list')
   const projectRoot = options.projectRoot ?? process.cwd()
   const config = await loadConfig(projectRoot)
   const skeletonPath = resolve(projectRoot, config.skeleton)
@@ -60,6 +61,7 @@ export interface ResolveOptions {
 }
 
 export async function runAnnotateResolve(options: ResolveOptions): Promise<void> {
+  printCommandHeader('annotate resolve')
   // --as is required for bare ? resolution, but not for key? confirmation with --all
   const projectRoot = options.projectRoot ?? process.cwd()
   const config = await loadConfig(projectRoot)

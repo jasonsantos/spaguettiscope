@@ -23,7 +23,7 @@ import { walkFiles } from '../utils/files.js'
 import { gatherEntropyInput } from '../utils/entropy-input.js'
 import { CONNECTORS } from '../utils/connectors.js'
 import { type NormalizedRunRecord } from '@spaguettiscope/reports'
-import { printSuccess, printWarning } from '../formatter/index.js'
+import { printSuccess, printWarning, printCommandHeader } from '../formatter/index.js'
 import { analyzeGuidance } from '../formatter/guidance.js'
 
 export interface AnalyzeOptions {
@@ -38,6 +38,7 @@ export interface AnalyzeResult {
 }
 
 export async function runAnalyzeCommand(options: AnalyzeOptions = {}): Promise<AnalyzeResult> {
+  printCommandHeader('analyze')
   const projectRoot = options.projectRoot ?? process.cwd()
   const config = await loadConfig(projectRoot)
   const skeletonPath = resolve(projectRoot, config.skeleton)

@@ -8,7 +8,7 @@ import {
   type DetectedConnector,
   type PluginDetector,
 } from '@spaguettiscope/core'
-import { printWarning, printSuccess } from '../formatter/index.js'
+import { printWarning, printSuccess, printCommandHeader } from '../formatter/index.js'
 import { initGuidance } from '../formatter/guidance.js'
 
 export interface InitOptions {
@@ -18,6 +18,7 @@ export interface InitOptions {
 }
 
 export async function runInit(options: InitOptions = {}): Promise<void> {
+  printCommandHeader('init')
   const projectRoot = options.projectRoot ?? process.cwd()
 
   // Guard: refuse if config already exists

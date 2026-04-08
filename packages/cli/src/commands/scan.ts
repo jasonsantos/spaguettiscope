@@ -18,7 +18,7 @@ import {
   type LayerPolicyEdge,
 } from '@spaguettiscope/core'
 import { walkFiles } from '../utils/files.js'
-import { printSuccess } from '../formatter/index.js'
+import { printSuccess, printCommandHeader } from '../formatter/index.js'
 import { scanGuidance } from '../formatter/guidance.js'
 
 export interface ScanOptions {
@@ -26,6 +26,7 @@ export interface ScanOptions {
 }
 
 export async function runScan(options: ScanOptions = {}): Promise<void> {
+  printCommandHeader('scan')
   const projectRoot = options.projectRoot ?? process.cwd()
   const config = await loadConfig(projectRoot)
   const skeletonPath = resolve(projectRoot, config.skeleton)

@@ -3,52 +3,69 @@ import figlet from 'figlet';
 import gradient from 'gradient-string';
 import boxen from 'boxen';
 
+const VERSION = '2.0.0';
+
 export function printBanner(): void {
-  const VERSION = '2.0.0';
+  const hasColor = chalk.level > 0;
 
-  const fr = chalk.hex('#A78BFA');   // purple frame
-  const nA = chalk.hex('#FFE082');   // noodle strand A — bright gold
-  const nB = chalk.hex('#D4A017');   // noodle strand B — amber gold
+  if (hasColor) {
+    const br = chalk.hex('#555555'); // dark gray border
+    const n  = chalk.hex('#FFD54F'); // yellow noodles
 
-  // Frame is exactly 22 visual chars per line.
-  // Inner content is 18 chars. Two noodle strands cross at the centre (╳).
-  // Strand A (bright gold): descends ╲ from top-left → bottom-right
-  // Strand B (amber):        descends ╱ from top-right → bottom-left
-  // At ╳ (row 4), A is on top — so ╳ is rendered in nA's colour.
-  // After the cross the strands swap sides, carrying their identity with them.
-  const art = [
-    fr('  ╭──────────────────╮'),
-    fr('  │') + ' ' + nA('∿∿∿∿╲') + '     ' + nB('╱∿∿∿∿') + '  ' + fr('│'),
-    fr('  │') + '      ' + nA('╲') + '   ' + nB('╱') + '       ' + fr('│'),
-    fr('  │') + '       ' + nA('╲') + ' ' + nB('╱') + '        ' + fr('│'),
-    fr('  │') + '        ' + nA('╳') + '         ' + fr('│'),
-    fr('  │') + '       ' + nB('╱') + ' ' + nA('╲') + '        ' + fr('│'),
-    fr('  │') + '      ' + nB('╱') + '   ' + nA('╲') + '       ' + fr('│'),
-    fr('  │') + ' ' + nB('∿∿∿∿╱') + '     ' + nA('╲∿∿∿∿') + '  ' + fr('│'),
-    fr('  ╰──────────────────╯'),
-  ];
+    const art = [
+      br('  +----------------+'),
+      br('  |') + n(' / __ \\ \\__/ __ ') + br('|'),
+      br('  |') + n(' / /  \\ __ / /  ') + br('|'),
+      br('  |') + n(' \\ \\  / /  \\ \\  ') + br('|'),
+      br('  |') + n('  \\__/ /  \\ \\__ ') + br('|'),
+      br('  |') + n(' / __ \\ \\__/ __ ') + br('|'),
+      br('  |') + n(' / /  \\ ____/ / ') + br('|'),
+      br('  +----------------+'),
+    ];
 
-  // Wordmark sits beside the art, vertically centred on rows 4-7
-  const noodleGrad = gradient(['#FFE082', '#F0C040', '#D4A017', '#E8B830']);
-  const scopeGrad  = gradient(['#818CF8', '#A78BFA', '#22D3EE']);
-  const blank = '';
+    const noodleGrad = gradient(['#FFE082', '#F0C040', '#D4A017', '#E8B830']);
+    const scopeGrad  = gradient(['#818CF8', '#A78BFA', '#22D3EE']);
 
-  const wordmark = [
-    blank,
-    blank,
-    blank,
-    blank,
-    '  ' + noodleGrad('Spaguetti') + scopeGrad('Scope') + '  ' + chalk.hex('#818CF8').bold(`v${VERSION}`),
-    '  ' + chalk.hex('#475569')('─────────────────────────────────'),
-    '  ' + chalk.hex('#94A3B8')('Code topology & entropy analysis for monorepos'),
-    blank,
-    blank,
-  ];
+    const title = figlet.textSync('SpaguettiScope', { font: 'Calvin S' });
+    const titleLines = title.split('\n').filter((l: string) => l.trim());
+    const coloredTitle = titleLines.map((line: string) => {
+      const mid = Math.floor(line.length * 0.64);
+      return noodleGrad(line.slice(0, mid)) + scopeGrad(line.slice(mid));
+    });
 
-  console.log('');
-  for (let i = 0; i < art.length; i++) {
-    console.log(art[i] + (wordmark[i] ?? ''));
+    console.log('');
+    for (const line of art) console.log(line);
+    console.log('');
+    for (const line of coloredTitle) console.log('  ' + line);
+    console.log('  ' + chalk.hex('#94A3B8')('Code topology & entropy analysis for monorepos'));
+    console.log('  ' + chalk.hex('#818CF8').bold(`v${VERSION}`));
+    console.log('');
+  } else {
+    const title = figlet.textSync('SpaguettiScope', { font: 'Calvin S' });
+    console.log('');
+    console.log('  +----------------+');
+    console.log('  | / __ \\ \\__/ __ |');
+    console.log('  | / /  \\ __ / /  |');
+    console.log('  | \\ \\  / /  \\ \\  |');
+    console.log('  |  \\__/ /  \\ \\__ |');
+    console.log('  | / __ \\ \\__/ __ |');
+    console.log('  | / /  \\ ____/ / |');
+    console.log('  +----------------+');
+    console.log('');
+    for (const line of title.split('\n')) console.log('  ' + line);
+    console.log('  Code topology & entropy analysis for monorepos');
+    console.log('  v' + VERSION);
+    console.log('');
   }
+}
+
+export function printCommandHeader(command: string): void {
+  const hasColor = chalk.level > 0;
+  const label = hasColor
+    ? chalk.hex('#FFD54F')('🍝 ') + chalk.hex('#A78BFA').bold(`spasco ${command}`)
+    : `🍝 spasco ${command}`;
+  console.log('');
+  console.log('  ' + label);
   console.log('');
 }
 
