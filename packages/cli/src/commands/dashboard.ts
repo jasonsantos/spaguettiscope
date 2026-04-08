@@ -21,12 +21,6 @@ import {
 import { walkFiles } from '../utils/files.js'
 import { computeEntropyForProject } from '../utils/entropy-input.js'
 import {
-  AllureConnector,
-  PlaywrightConnector,
-  VitestConnector,
-  LcovConnector,
-  EslintConnector,
-  TypescriptConnector,
   aggregateAll,
   aggregateByConnector,
   buildDashboardHtml,
@@ -41,15 +35,7 @@ import {
 } from '@spaguettiscope/reports'
 import { printBanner, printSuccess, printWarning, printBox } from '../formatter/index.js'
 import { dashboardGuidance } from '../formatter/guidance.js'
-
-const CONNECTORS = [
-  new AllureConnector(),
-  new PlaywrightConnector(),
-  new VitestConnector(),
-  new LcovConnector(),
-  new EslintConnector(),
-  new TypescriptConnector(),
-]
+import { CONNECTORS } from '../utils/connectors.js'
 
 export interface DashboardOptions {
   config?: string

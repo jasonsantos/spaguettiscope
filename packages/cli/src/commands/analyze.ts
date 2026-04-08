@@ -21,7 +21,8 @@ import {
 } from '@spaguettiscope/core'
 import { walkFiles } from '../utils/files.js'
 import { gatherEntropyInput } from '../utils/entropy-input.js'
-import { AllureConnector } from '@spaguettiscope/reports'
+import { CONNECTORS } from '../utils/connectors.js'
+import { type NormalizedRunRecord } from '@spaguettiscope/reports'
 import { printSuccess, printWarning } from '../formatter/index.js'
 import { analyzeGuidance } from '../formatter/guidance.js'
 
@@ -71,30 +72,29 @@ export async function runAnalyzeCommand(options: AnalyzeOptions = {}): Promise<A
   graphSpinner.succeed('Import graph built')
 
   // 3. Load test records from connectors
-  let testRecords: TestRecord[] = []
+  const records: NormalizedRunRecord[] = []
   if (config.dashboard.connectors.length > 0) {
     const recSpinner = ora('Loading test records…').start()
-    const connector = new AllureConnector()
     const engine = new InferenceEngine(defaultDefinitions, projectRoot, config.inference ?? {})
     for (const connectorConfig of config.dashboard.connectors) {
-      if (connectorConfig.id === 'allure') {
-        try {
-          const records = await connector.read(connectorConfig, engine)
-          testRecords.push(
-            ...records.map(r => ({
-              id: r.id,
-              historyId: r.metadata?.historyId as string | undefined,
-              status: r.status,
-              dimensions: r.dimensions,
-            }))
-          )
-        } catch {
-          // connector error — skip
-        }
+      const connector = CONNECTORS.find(c => c.id === connectorConfig.id)
+      if (!connector) continue
+      try {
+        const results = await connector.read(connectorConfig, engine)
+        records.push(...results)
+      } catch {
+        // connector error — skip
       }
     }
-    recSpinner.succeed(`Loaded ${testRecords.length} test records`)
+    recSpinner.succeed(`Loaded ${records.length} test records`)
   }
+
+  const testRecords: TestRecord[] = records.map(r => ({
+    id: r.id,
+    historyId: r.metadata?.historyId as string | undefined,
+    status: r.status,
+    dimensions: r.dimensions,
+  }))
 
   // 4. Load analysis plugins from config
   const pluginRules: AnalysisRule[] = []
@@ -150,7 +150,7 @@ export async function runAnalyzeCommand(options: AnalyzeOptions = {}): Promise<A
     importGraph,
     findings,
     topology,
-    records: testRecords,
+    records,
     skeleton,
   })
   const entropy = computeEntropy(entropyInput)
