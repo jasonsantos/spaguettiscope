@@ -123,19 +123,22 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
     }
   }
 
-  // inherit-from-import pass
+  // Shared topology setup — used by inherit-from-import, analysis, and entropy
   const allFiles = walkFiles(projectRoot, projectRoot)
   const packages = discoverWorkspaces(projectRoot)
+  const pkgFiles = new Map<string, string[]>()
+  for (const pkg of packages) pkgFiles.set(pkg.rel, [])
+  for (const f of allFiles) {
+    const matchingPkg = packages.find(pkg => pkg.rel === '.' || f.startsWith(pkg.rel + '/'))
+    if (matchingPkg) pkgFiles.get(matchingPkg.rel)!.push(f)
+  }
+  const importGraph = mergeImportGraphs(
+    packages.map(pkg => buildImportGraph(pkg.root, pkgFiles.get(pkg.rel) ?? [], projectRoot))
+  )
 
   if (!config.rules.disable.includes('inherit-from-import')) {
     const inheritSpinner = ora('Running inherit-from-import…').start()
     try {
-      const graphs = packages.map(pkg => {
-        const pkgFiles =
-          pkg.rel === '.' ? allFiles : allFiles.filter(f => f.startsWith(pkg.rel + '/'))
-        return buildImportGraph(pkg.root, pkgFiles, projectRoot)
-      })
-      const importGraph = mergeImportGraphs(graphs)
 
       for (const record of records) {
         if (record.dimensions.role !== 'test') continue
@@ -231,18 +234,6 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       }
     }
 
-    const analysisPkgFiles = new Map<string, string[]>()
-    for (const pkg of packages) analysisPkgFiles.set(pkg.rel, [])
-    for (const f of allFiles) {
-      const matchingPkg = packages.find(pkg => pkg.rel === '.' || f.startsWith(pkg.rel + '/'))
-      if (matchingPkg) analysisPkgFiles.get(matchingPkg.rel)!.push(f)
-    }
-    const analysisImportGraph = mergeImportGraphs(
-      packages.map(pkg =>
-        buildImportGraph(pkg.root, analysisPkgFiles.get(pkg.rel) ?? [], projectRoot)
-      )
-    )
-
     const pluginRules: AnalysisRule[] = []
     for (const pluginId of config.analysisPlugins) {
       try {
@@ -269,7 +260,7 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
       files: allFiles,
       topology: analysisTopology,
       rules: [...builtInAnalysisRules, ...pluginRules],
-      importGraph: analysisImportGraph,
+      importGraph: importGraph,
       cache: analysisCache,
       layerPolicy: skeleton?.layerPolicy,
       layerPolicyDraft: skeleton?.layerPolicyDraft,
@@ -281,10 +272,11 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
     const entropyResult = computeEntropyForProject(
       {
         files: allFiles,
-        importGraph: analysisImportGraph,
+        importGraph: importGraph,
         findings,
         topology: analysisTopology,
         records,
+        skeleton,
       },
       packages
     )

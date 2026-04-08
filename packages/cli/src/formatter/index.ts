@@ -3,11 +3,6 @@ import figlet from 'figlet';
 import gradient from 'gradient-string';
 import boxen from 'boxen';
 
-// Golden noodle gradient (warm yellow → amber → gold)
-const noodleGrad = gradient(['#FFE082', '#F0C040', '#D4A017', '#E8B830']);
-// Scope gradient (indigo → purple → cyan — matching the brand)
-const scopeGrad  = gradient(['#818CF8', '#A78BFA', '#22D3EE']);
-
 export function printBanner(): void {
   const VERSION = '2.0.0';
 

@@ -151,6 +151,7 @@ export async function runAnalyzeCommand(options: AnalyzeOptions = {}): Promise<A
     findings,
     topology,
     records: testRecords,
+    skeleton,
   })
   const entropy = computeEntropy(entropyInput)
   printSuccess(`Entropy: ${entropy.score} (${entropy.classification})`)

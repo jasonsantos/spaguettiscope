@@ -1,5 +1,5 @@
-import type { EntropyInput, EntropyResult, ImportGraph, Finding, DimensionSet } from '@spaguettiscope/core'
-import { computeEntropy } from '@spaguettiscope/core'
+import type { EntropyInput, EntropyResult, ImportGraph, Finding, DimensionSet, SkeletonFile } from '@spaguettiscope/core'
+import { computeEntropy, isPending } from '@spaguettiscope/core'
 
 export interface EntropyRecord {
   status: string
@@ -13,6 +13,7 @@ export interface GatherEntropyInputOptions {
   findings: Finding[]
   topology: Map<string, DimensionSet>
   records: EntropyRecord[]
+  skeleton?: SkeletonFile | null
 }
 
 export function gatherEntropyInput(opts: GatherEntropyInputOptions): EntropyInput {
@@ -64,13 +65,11 @@ export function gatherEntropyInput(opts: GatherEntropyInputOptions): EntropyInpu
     return sum + 0.5
   }, 0)
 
-  // Classification completeness
-  const totalEntries = topology.size
-  const resolvedEntries = [...topology.values()].filter(dims => {
-    const keys = Object.keys(dims)
-    return keys.length > 0 && !keys.some(k => k.endsWith('?') || k === '?')
-  }).length
-  const resolvedRatio = totalEntries > 0 ? resolvedEntries / totalEntries : 1
+  // Classification completeness — use skeleton entries directly since matchFile strips draft markers
+  const skeletonEntries = opts.skeleton?.entries ?? []
+  const totalEntries = skeletonEntries.length
+  const pendingEntries = skeletonEntries.filter(e => isPending(e)).length
+  const resolvedRatio = totalEntries > 0 ? (totalEntries - pendingEntries) / totalEntries : 1
 
   return {
     fileCount: files.length,
