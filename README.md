@@ -1,22 +1,26 @@
 # SpaguettiScope
 
-> Code topology and test quality dashboard for modern development teams
+> Code topology & entropy analysis for monorepos
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen)](https://nodejs.org/)
 [![pnpm](https://img.shields.io/badge/pnpm-%3E%3D8.0.0-blue)](https://pnpm.io/)
 
 SpaguettiScope helps development teams understand their codebase by classifying every file into a
 topology (layer, role, domain) using a skeleton YAML, then surfacing insights through a live HTML
-dashboard. It shows test coverage by dimension, architectural violations, and code quality findings
-— all in one place.
+dashboard. It shows test pass rates and coverage by dimension, architectural violations, code
+quality findings, and an entropy score (0–10) that quantifies structural disorder — all in one
+place.
 
 ## Features
 
 - **Skeleton-based topology** — classify files by layer, role, and domain using a YAML skeleton
-- **HTML dashboard** — test quality overview, drilldown table, findings, and annotation history
+- **HTML dashboard** — test quality overview with per-package and per-dimension drilldowns, findings
+  tab, trend sparklines
+- **Entropy score** — 0–10 composite from five weighted subscores (stability, boundaries, coverage,
+  violations, classification)
 - **Rule-based analysis** — built-in and plugin-defined rules check topology for violations
-- **Annotation workflow** — flag and resolve analysis findings from the CLI
+- **Annotation workflow** — review and confirm proposed dimension values from the CLI
 - **Plugin architecture** — framework-specific scan and analysis rules (Next.js included)
 - **Monorepo aware** — discovers pnpm/npm workspaces automatically
 
@@ -24,7 +28,7 @@ dashboard. It shows test coverage by dimension, architectural violations, and co
 
 ### Prerequisites
 
-- Node.js 18.0.0 or higher
+- Node.js 22.0.0 or higher
 - pnpm 8.0.0 or higher
 
 ### Installation
@@ -57,19 +61,19 @@ spasco analyze
 
 ## CLI Commands
 
-| Command                        | Description                                                                                                                                                                                        |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `spasco init`                  | Auto-detect tools, write `spasco.config.json`. Use `--interactive` to confirm each connector, `--plugins <ids>` to run detectors from plugins (comma-separated). Refuses if config already exists. |
-| `spasco scan`                  | Scan the project: collect files, build topology, read test results                                                                                                                                 |
-| `spasco dashboard`             | Generate and serve the HTML dashboard (opens in browser)                                                                                                                                           |
-| `spasco analyze`               | Run analysis rules and print findings; exits non-zero on errors                                                                                                                                    |
-| `spasco check`                 | Lightweight rule check (no report generation, fast CI use)                                                                                                                                         |
-| `spasco annotate list`         | List all current analysis findings                                                                                                                                                                 |
-| `spasco annotate resolve <id>` | Mark a finding as resolved                                                                                                                                                                         |
+| Command                              | Description                                                                                                                                                                                        |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spasco init`                        | Auto-detect tools, write `spasco.config.json`. Use `--interactive` to confirm each connector, `--plugins <ids>` to run detectors from plugins (comma-separated). Refuses if config already exists. |
+| `spasco scan`                        | Scan the project: collect files, build topology, propose dimension values                                                                                                                          |
+| `spasco dashboard`                   | Generate HTML dashboard with pass rates, coverage, entropy, findings, and trends                                                                                                                   |
+| `spasco analyze`                     | Run analysis rules, compute entropy, print findings. Always exits 0.                                                                                                                               |
+| `spasco check`                       | Same as analyze but exits 1 on findings above `--severity` or entropy above `--max-entropy`. For CI gates.                                                                                         |
+| `spasco annotate list`               | List skeleton entries with unresolved dimensions (`?` or `key?` proposals)                                                                                                                         |
+| `spasco annotate resolve [values..]` | Confirm or override proposed dimension values. Use `--as <dim> --all` to accept all proposals for a dimension.                                                                                     |
 
 ## Configuration
 
-SpaguettiScope reads `.spasco/spasco.config.json` (or `spasco.config.json`) at the project root.
+SpaguettiScope reads `spasco.config.json` (or `spaguettiscope.config.json`) at the project root.
 
 | Key                      | Description                                    | Default                      |
 | ------------------------ | ---------------------------------------------- | ---------------------------- |
@@ -197,10 +201,12 @@ Register analysis plugins in `spasco.config.json`:
 
 ### Built-in Analysis Rules
 
-| Rule ID                     | Corpus | Severity | Description                                |
-| --------------------------- | ------ | -------- | ------------------------------------------ |
-| `no-untested-file`          | files  | warning  | Files with no associated test records      |
-| `missing-domain-annotation` | files  | info     | Files in a domain layer with no domain set |
+| Rule ID                  | Corpus  | Severity | Description                                                      |
+| ------------------------ | ------- | -------- | ---------------------------------------------------------------- |
+| `built-in:coverage-gap`  | files   | warning  | Files with a meaningful role but no test directly importing them |
+| `built-in:unused-export` | files   | info     | Files with no importers and not an entry point                   |
+| `built-in:circular-dep`  | files   | warning  | Files in a circular import cycle                                 |
+| `built-in:flaky-test`    | records | info     | Test records with a failure rate between 10–90% across runs      |
 
 ### Next.js Analysis Rules (`@spaguettiscope/plugin-nextjs/analysis`)
 
@@ -238,10 +244,10 @@ SpaguettiScope stores all generated artifacts under `.spasco/` by default:
 
 ```
 .spasco/
-├── skeleton.yaml          # topology classification rules
-├── spasco.config.json     # project configuration
-├── intermediates.json     # analysis rule cache
-└── reports/               # generated dashboard HTML + data
+├── skeleton.yaml          # file topology (checked in)
+├── history.jsonl          # run history audit trail (checked in)
+├── intermediates.json     # analysis rule cache (gitignored)
+└── reports/               # generated dashboard HTML + data (gitignored)
     ├── index.html
     └── data/
         ├── summary.json
@@ -249,7 +255,8 @@ SpaguettiScope stores all generated artifacts under `.spasco/` by default:
         └── findings.json
 ```
 
-Add `.spasco/reports/` to `.gitignore`. Commit `skeleton.yaml` and `spasco.config.json`.
+Add `.spasco/reports/` and `.spasco/intermediates.json` to `.gitignore`. Commit `skeleton.yaml`,
+`history.jsonl`, and `spasco.config.json`.
 
 ## License
 
