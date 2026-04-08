@@ -1,13 +1,18 @@
 import type { EntropyInput, EntropyResult, ImportGraph, Finding, DimensionSet } from '@spaguettiscope/core'
 import { computeEntropy } from '@spaguettiscope/core'
-import type { NormalizedRunRecord } from '@spaguettiscope/reports'
+
+export interface EntropyRecord {
+  status: string
+  connectorId?: string
+  dimensions?: Record<string, string>
+}
 
 export interface GatherEntropyInputOptions {
   files: string[]
   importGraph: ImportGraph
   findings: Finding[]
   topology: Map<string, DimensionSet>
-  records: NormalizedRunRecord[]
+  records: EntropyRecord[]
 }
 
 export function gatherEntropyInput(opts: GatherEntropyInputOptions): EntropyInput {
@@ -120,8 +125,8 @@ export function computeEntropyForProject(
     }
 
     const pkgRecords = opts.records.filter(r => {
-      const dims = r.dimensions as Record<string, string>
-      return dims.package?.includes(pkg.rel) || false
+      const dims = r.dimensions ?? {}
+      return dims['package']?.includes(pkg.rel) || false
     })
 
     const pkgTopology = new Map<string, DimensionSet>()
