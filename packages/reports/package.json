@@ -1,6 +1,24 @@
 {
   "name": "@spaguettiscope/reports",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "Connectors, aggregation, and HTML dashboard renderer for SpaguettiScope",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasonsantos/spaguettiscope.git",
+    "directory": "packages/reports"
+  },
+  "homepage": "https://github.com/jasonsantos/spaguettiscope",
+  "bugs": {
+    "url": "https://github.com/jasonsantos/spaguettiscope/issues"
+  },
+  "keywords": [
+    "dashboard",
+    "testing",
+    "coverage",
+    "html",
+    "report"
+  ],
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -8,6 +26,7 @@
   "exports": {
     ".": "./dist/index.js"
   },
+  "types": "./dist/index.d.ts",
   "files": [
     "dist/**",
     "README.md"
@@ -23,6 +42,10 @@
   "dependencies": {
     "@spaguettiscope/core": "workspace:*",
     "recharts": "^3.8.1"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "latest",

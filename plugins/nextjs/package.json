@@ -1,13 +1,35 @@
 {
   "name": "@spaguettiscope/plugin-nextjs",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "Next.js scan and analysis plugin for SpaguettiScope",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasonsantos/spaguettiscope.git",
+    "directory": "plugins/nextjs"
+  },
+  "homepage": "https://github.com/jasonsantos/spaguettiscope",
+  "bugs": {
+    "url": "https://github.com/jasonsantos/spaguettiscope/issues"
+  },
+  "keywords": [
+    "nextjs",
+    "next",
+    "spaguettiscope",
+    "plugin"
+  ],
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "exports": {
     ".": "./dist/index.js",
     "./analysis": "./dist/analysis.js"
   },
+  "types": "./dist/index.d.ts",
   "files": [
-    "dist/**"
+    "dist/**",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc --project tsconfig.json",

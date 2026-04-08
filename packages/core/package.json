@@ -1,6 +1,24 @@
 {
   "name": "@spaguettiscope/core",
   "version": "2.0.0",
+  "description": "Classification engine, skeleton, import graph, and analysis rules for SpaguettiScope",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasonsantos/spaguettiscope.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/jasonsantos/spaguettiscope",
+  "bugs": {
+    "url": "https://github.com/jasonsantos/spaguettiscope/issues"
+  },
+  "keywords": [
+    "monorepo",
+    "analysis",
+    "topology",
+    "entropy",
+    "testing"
+  ],
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -10,6 +28,7 @@
     "./classification": "./dist/classification/index.js",
     "./config": "./dist/config/index.js"
   },
+  "types": "./dist/index.d.ts",
   "files": [
     "dist/**",
     "README.md"
