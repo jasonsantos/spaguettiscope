@@ -103,4 +103,44 @@ describe('runAnnotateResolve', () => {
     const skeleton = readSkeleton(join(dir, '.spasco', 'skeleton.yaml'))
     expect(skeleton.entries[0].attributes).toEqual({ domain: 'checkout' })
   })
+
+  it('resolves only the targeted dimension when using --all with key? entries', async () => {
+    makeProject(
+      dir,
+      [
+        `- attributes:`,
+        `    "domain?": cli`,
+        `    "layer?": utility`,
+        `  paths:`,
+        `    - packages/cli/src/utils/**`,
+        `  draft: true`,
+        `  source: "workspace:@spaguettiscope/cli"`,
+      ].join('\n')
+    )
+    await runAnnotateResolve({ values: [], all: true, as: 'domain', projectRoot: dir })
+    const skeleton = readSkeleton(join(dir, '.spasco', 'skeleton.yaml'))
+    expect(skeleton.entries[0].attributes).toHaveProperty('domain', 'cli')
+    expect(skeleton.entries[0].attributes).toHaveProperty('layer?', 'utility')
+    expect(skeleton.entries[0].attributes).not.toHaveProperty('domain?')
+    expect((skeleton.entries[0] as any).draft).toBe(true)
+  })
+
+  it('fully resolves entry after resolving all dimensions separately', async () => {
+    makeProject(
+      dir,
+      [
+        `- attributes:`,
+        `    "domain?": cli`,
+        `    "layer?": utility`,
+        `  paths:`,
+        `    - packages/cli/src/utils/**`,
+        `  draft: true`,
+      ].join('\n')
+    )
+    await runAnnotateResolve({ values: [], all: true, as: 'domain', projectRoot: dir })
+    await runAnnotateResolve({ values: [], all: true, as: 'layer', projectRoot: dir })
+    const skeleton = readSkeleton(join(dir, '.spasco', 'skeleton.yaml'))
+    expect(skeleton.entries[0].attributes).toEqual({ domain: 'cli', layer: 'utility' })
+    expect((skeleton.entries[0] as any).draft).toBeUndefined()
+  })
 })

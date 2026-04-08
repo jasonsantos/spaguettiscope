@@ -83,19 +83,28 @@ export async function runAnnotateResolve(options: ResolveOptions): Promise<void>
 
     const proposedKeys = Object.keys(entry.attributes).filter(k => k.endsWith('?') && k !== '?')
 
-    // Handle key? proposed entries: confirm all proposed dimensions
+    // Handle key? proposed entries: confirm only the targeted dimension
     if (proposedKeys.length > 0 && options.all) {
+      const targetKey = options.as + '?'
+      if (!proposedKeys.includes(targetKey)) return entry
+
       const newAttributes: Record<string, string> = {}
       for (const [k, v] of Object.entries(entry.attributes)) {
-        if (k.endsWith('?') && k !== '?') {
-          newAttributes[k.slice(0, -1)] = v // layer? → layer
+        if (k === targetKey) {
+          newAttributes[options.as] = v // domain? → domain
         } else {
-          newAttributes[k] = v
+          newAttributes[k] = v // keep other keys as-is (including other key? entries)
         }
       }
       Object.assign(newAttributes, extraAttrs)
       resolved++
-      return { attributes: newAttributes, paths: entry.paths }
+
+      // Stay draft if any key? attributes remain
+      const stillHasProposed = Object.keys(newAttributes).some(k => k.endsWith('?') && k !== '?')
+      if (stillHasProposed) {
+        return { attributes: newAttributes, paths: entry.paths, draft: true, source: (entry as any).source }
+      }
+      return { attributes: newAttributes, paths: entry.paths, ...((entry as any).source ? { source: (entry as any).source } : {}) }
     }
 
     // Handle bare ? entries (existing behavior)
