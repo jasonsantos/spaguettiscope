@@ -223,7 +223,7 @@ interface ObservatoryProps {
 }
 
 export function Observatory({ summary, packages, onSelectPackage, onSelectDimension, onSelectFindings }: ObservatoryProps) {
-  const { overall, byConnector, history, dimensions, connectors } = summary;
+  const { byConnector, history, connectors } = summary;
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const gradId = useId();
 
