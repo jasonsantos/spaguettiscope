@@ -395,7 +395,7 @@ export function deriveSuites(records: RawRecord[], projectRoot?: string): SuiteI
     const sourceFile = file.replace(/\.(test|spec)(\.(ts|tsx|js|jsx|mts|cts))$/, '$2');
     const covEntry = coverageByFile.get(sourceFile);
     const pkg = first.dimensions['package'] ?? 'unknown';
-    const coverage = covEntry !== undefined ? covEntry : (coverageByPkg.get(pkg) ?? null);
+    const coverage = covEntry !== undefined ? covEntry : null;
 
     // Relativize file path when projectRoot is available
     const displayFile = projectRoot && file.startsWith(projectRoot)

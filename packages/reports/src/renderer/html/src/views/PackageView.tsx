@@ -1,6 +1,6 @@
 // PackageView.tsx — drill-down for a single package: gauges, dimension chips, suite tree.
 import React, { useState } from 'react';
-import { C, alpha, fmt, hue, covColor, totalF, Donut, FindingsBadge, passRateHealth, coverageHealth, findingsHealth } from '../shared.tsx';
+import { C, alpha, fmt, hue, covColor, totalF, Donut, FindingsBadge, passRateHealth, coverageHealth, findingsHealth, entropyHealth } from '../shared.tsx';
 import { SuiteTree } from './SuiteTree.tsx';
 import type { PackageInfo, SuiteInfo } from '../derive.ts';
 
@@ -40,11 +40,13 @@ export function PackageView({ pkg, allSuites }: PackageViewProps) {
   const pH = passRateHealth(pkg.passRate ?? 0);
   const cH = coverageHealth(pkg.coverage);
   const fH = findingsHealth(pkg.findings);
+  const eH = pkg.entropy ? entropyHealth(pkg.entropy.score) : null;
+  const gaugeCount = eH ? 5 : 4;
 
   return (
     <div>
       {/* ── Gauge row ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${gaugeCount}, 1fr)`, gap: 16, marginBottom: 28 }}>
 
         {/* Pass rate */}
         <div style={{
@@ -134,6 +136,32 @@ export function PackageView({ pkg, allSuites }: PackageViewProps) {
           <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>Test Suites</div>
           <div style={{ fontSize: 12, color: C.muted }}>{pkg.tests} total tests</div>
         </div>
+
+        {/* Entropy */}
+        {pkg.entropy && eH && (
+          <div style={{
+            background: C.surface, border: `1px solid ${C.border}`,
+            borderLeft: `4px solid ${eH.accent}`, borderRadius: 12,
+            padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            position: 'relative', overflow: 'hidden',
+          }}>
+            <div style={{
+              position: 'absolute', top: 0, left: 0, width: 100, height: 100,
+              background: `radial-gradient(circle at top left, ${alpha(eH.accent, 9)}, transparent 70%)`,
+              pointerEvents: 'none',
+            }} />
+            <span style={{
+              position: 'absolute', top: 10, right: 10, fontSize: 10, padding: '2px 7px',
+              borderRadius: 4, background: eH.bg, color: eH.accent, fontWeight: 600,
+              letterSpacing: '0.04em',
+            }}>{eH.chip}</span>
+            <div style={{ marginTop: 22, fontSize: 36, fontWeight: 800, color: eH.text, lineHeight: 1 }}>
+              {pkg.entropy.score.toFixed(1)}
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>Entropy</div>
+            <div style={{ fontSize: 12, color: C.muted }}>{pkg.entropy.classification}</div>
+          </div>
+        )}
       </div>
 
       {/* ── Dimension filter chips ── */}
