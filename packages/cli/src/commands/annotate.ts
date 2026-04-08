@@ -1,6 +1,7 @@
 import { resolve } from 'node:path'
 import { loadConfig, readSkeleton, writeSkeleton, isDraft } from '@spaguettiscope/core'
 import { printSuccess } from '../formatter/index.js'
+import { annotateListGuidance, annotateResolveGuidance } from '../formatter/guidance.js'
 
 export async function runAnnotateList(options: { projectRoot?: string } = {}): Promise<void> {
   const projectRoot = options.projectRoot ?? process.cwd()
@@ -12,29 +13,42 @@ export async function runAnnotateList(options: { projectRoot?: string } = {}): P
     e => isDraft(e) && Object.keys(e.attributes).some(k => k.endsWith('?'))
   )
 
-  if (pending.length === 0) {
-    console.log('No pending annotations. Skeleton is fully resolved.')
-    return
-  }
+  if (pending.length > 0) {
+    console.log(`\n? entries requiring annotation (${pending.length}):\n`)
+    for (let i = 0; i < pending.length; i++) {
+      const entry = pending[i]
+      const paths = entry.paths.join(', ')
+      const src = (entry as any).source ? `  (${(entry as any).source})` : ''
 
-  console.log(`\n? entries requiring annotation (${pending.length}):\n`)
-  for (let i = 0; i < pending.length; i++) {
-    const entry = pending[i]
-    const paths = entry.paths.join(', ')
-    const src = (entry as any).source ? `  (${(entry as any).source})` : ''
-
-    const proposedKeys = Object.keys(entry.attributes).filter(k => k.endsWith('?') && k !== '?')
-    if (proposedKeys.length > 0) {
-      const proposals = proposedKeys
-        .map(k => `${k.slice(0, -1)} = "${entry.attributes[k]}"`)
-        .join(', ')
-      console.log(`  [${i + 1}] ${proposals}   ${paths}${src}`)
-    } else {
-      const value = entry.attributes['?']
-      console.log(`  [${i + 1}] ? = "${value}"   ${paths}${src}`)
+      const proposedKeys = Object.keys(entry.attributes).filter(k => k.endsWith('?') && k !== '?')
+      if (proposedKeys.length > 0) {
+        const proposals = proposedKeys
+          .map(k => `${k.slice(0, -1)} = "${entry.attributes[k]}"`)
+          .join(', ')
+        console.log(`  [${i + 1}] ${proposals}   ${paths}${src}`)
+      } else {
+        const value = entry.attributes['?']
+        console.log(`  [${i + 1}] ? = "${value}"   ${paths}${src}`)
+      }
     }
+    console.log()
   }
-  console.log()
+
+  const pendingDimensions = [
+    ...new Set(
+      pending.flatMap(e =>
+        Object.keys(e.attributes)
+          .filter(k => k.endsWith('?'))
+          .map(k => k.slice(0, -1))
+      )
+    ),
+  ]
+  console.log(
+    annotateListGuidance({
+      pendingCount: pending.length,
+      dimensions: pendingDimensions,
+    })
+  )
 }
 
 export interface ResolveOptions {
@@ -102,4 +116,25 @@ export async function runAnnotateResolve(options: ResolveOptions): Promise<void>
 
   writeSkeleton(skeletonPath, { ...skeleton, entries })
   printSuccess(`Resolved ${resolved} entr${resolved === 1 ? 'y' : 'ies'}`)
+
+  const updatedSkeleton = readSkeleton(skeletonPath)
+  const stillPending = updatedSkeleton.entries.filter(
+    e => isDraft(e) && Object.keys(e.attributes).some(k => k.endsWith('?'))
+  )
+  const remainingDimensions = [
+    ...new Set(
+      stillPending.flatMap(e =>
+        Object.keys(e.attributes)
+          .filter(k => k.endsWith('?'))
+          .map(k => k.slice(0, -1))
+      )
+    ),
+  ]
+
+  console.log(
+    annotateResolveGuidance({
+      resolved,
+      remainingDimensions,
+    })
+  )
 }

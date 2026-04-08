@@ -19,6 +19,7 @@ import {
 } from '@spaguettiscope/core'
 import { walkFiles } from '../utils/files.js'
 import { printSuccess } from '../formatter/index.js'
+import { scanGuidance } from '../formatter/guidance.js'
 
 export interface ScanOptions {
   projectRoot?: string
@@ -240,5 +241,30 @@ export async function runScan(options: ScanOptions = {}): Promise<void> {
 
   printSuccess(
     `Scan complete — ${added} new, ${unchanged} unchanged, ${markedStale} stale → ${skeletonPath}`
+  )
+
+  // Count pending entries by dimension for guidance
+  const updatedSkeleton = readSkeleton(skeletonPath)
+  const pendingEntries = updatedSkeleton.entries.filter(e =>
+    Object.keys(e.attributes).some(k => k.endsWith('?'))
+  )
+  const pendingDomains = pendingEntries.filter(e =>
+    Object.keys(e.attributes).some(k => k === 'domain?')
+  ).length
+  const pendingLayers = pendingEntries.filter(e =>
+    Object.keys(e.attributes).some(k => k === 'layer?')
+  ).length
+
+  console.log(
+    scanGuidance({
+      fileCount: allFiles.length,
+      newEntries: added,
+      unchanged,
+      stale: markedStale,
+      pendingDomains,
+      pendingLayers,
+      layerPolicyPackages: Object.keys(proposedLayerPolicy).length,
+      skeletonPath: config.skeleton,
+    })
   )
 }

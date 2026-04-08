@@ -23,6 +23,7 @@ import { walkFiles } from '../utils/files.js'
 import { gatherEntropyInput } from '../utils/entropy-input.js'
 import { AllureConnector } from '@spaguettiscope/reports'
 import { printSuccess, printWarning } from '../formatter/index.js'
+import { analyzeGuidance } from '../formatter/guidance.js'
 
 export interface AnalyzeOptions {
   projectRoot?: string
@@ -153,6 +154,18 @@ export async function runAnalyzeCommand(options: AnalyzeOptions = {}): Promise<A
   })
   const entropy = computeEntropy(entropyInput)
   printSuccess(`Entropy: ${entropy.score} (${entropy.classification})`)
+
+  if (!options.ci) {
+    console.log(
+      analyzeGuidance({
+        errorCount: summary.error,
+        warningCount: summary.warning,
+        infoCount: summary.info,
+        entropyScore: entropy.score,
+        entropyClassification: entropy.classification,
+      })
+    )
+  }
 
   return { findings, summary, entropy }
 }

@@ -9,6 +9,7 @@ import {
   type PluginDetector,
 } from '@spaguettiscope/core'
 import { printWarning, printSuccess } from '../formatter/index.js'
+import { initGuidance } from '../formatter/guidance.js'
 
 export interface InitOptions {
   interactive?: boolean
@@ -150,7 +151,14 @@ export async function runInit(options: InitOptions = {}): Promise<void> {
         detected.map(d => `  • ${d.source}`).join('\n')
     )
   }
-  printSuccess(`Config written → ${configPath}\nRun: spasco dashboard`)
+  printSuccess(`Config written → ${configPath}`)
+  console.log(
+    initGuidance({
+      connectorCount: detected.length,
+      pluginCount: uniquePlugins.length,
+      configPath: 'spasco.config.json',
+    })
+  )
 }
 
 async function promptProjectName(current: string | undefined, rl: ReturnType<typeof createInterface>): Promise<string | undefined> {

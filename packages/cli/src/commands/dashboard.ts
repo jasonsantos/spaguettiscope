@@ -40,6 +40,7 @@ import {
   type NormalizedRunRecord,
 } from '@spaguettiscope/reports'
 import { printBanner, printSuccess, printWarning, printBox } from '../formatter/index.js'
+import { dashboardGuidance } from '../formatter/guidance.js'
 
 const CONNECTORS = [
   new AllureConnector(),
@@ -322,6 +323,15 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
     }
 
     printSuccess(`Dashboard generated → ${outputPath}`)
+    console.log(
+      dashboardGuidance({
+        outputPath: join(outputDir, 'index.html'),
+        entropyScore: entropyResult.overall.score,
+        entropyClassification: entropyResult.overall.classification,
+        testPassRate: aggregated.overall.passRate,
+        findingCount: findings.length,
+      })
+    )
   }
 
   await appendHistory(historyPath, {

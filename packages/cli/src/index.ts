@@ -4,6 +4,7 @@ import { runScan } from './commands/scan.js';
 import { runAnnotateList, runAnnotateResolve } from './commands/annotate.js';
 import { runAnalyzeCommand } from './commands/analyze.js';
 import { runInit } from './commands/init.js';
+import { checkGuidance } from './formatter/guidance.js';
 
 const program = new Command();
 
@@ -104,17 +105,27 @@ program
   .action(async options => {
     try {
       const { summary, entropy } = await runAnalyzeCommand({ ci: true })
-      const hasErrors =
+      const severityFail =
         options.severity === 'info'
           ? summary.error + summary.warning + summary.info > 0
           : options.severity === 'warning'
             ? summary.error + summary.warning > 0
             : summary.error > 0
-      if (hasErrors) process.exit(1)
-      if (options.maxEntropy !== undefined && entropy.score > options.maxEntropy) {
-        console.error(`Entropy ${entropy.score} exceeds threshold ${options.maxEntropy}`)
-        process.exit(1)
-      }
+      const entropyFail = options.maxEntropy !== undefined && entropy.score > options.maxEntropy
+      const passed = !severityFail && !entropyFail
+
+      console.log(
+        checkGuidance({
+          passed,
+          entropyScore: entropy.score,
+          maxEntropy: options.maxEntropy,
+          severity: options.severity ?? 'error',
+          errorCount: summary.error,
+          warningCount: summary.warning,
+        })
+      )
+
+      if (!passed) process.exit(1)
     } catch (err) {
       console.error((err as Error).message)
       process.exit(1)
