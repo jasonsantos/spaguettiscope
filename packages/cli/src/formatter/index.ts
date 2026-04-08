@@ -45,8 +45,8 @@ export function printBanner(): void {
     blank,
     '  ' + noodleGrad('Spaguetti') + scopeGrad('Scope') + '  ' + chalk.hex('#818CF8').bold(`v${VERSION}`),
     '  ' + chalk.hex('#475569')('─────────────────────────────────'),
-    '  ' + chalk.hex('#94A3B8')('Framework-agnostic code entropy analyzer'),
-    '  ' + chalk.hex('#64748B')('Cool but serious. Built for developers.'),
+    '  ' + chalk.hex('#94A3B8')('Code topology & entropy analysis for monorepos'),
+    blank,
     blank,
   ];
 

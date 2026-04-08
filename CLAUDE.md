@@ -15,9 +15,8 @@ monorepos. It does two main things:
 2. **Analysis** — runs rule-based checks over the file topology (import graph + test records) and
    surfaces findings (coverage gaps, unused exports, circular deps, flaky tests, layer violations).
 
-There is **no entropy score**. The tool does not calculate complexity metrics. It classifies files
-into dimensions (role, layer, domain) via rules, then aggregates test/lint results by those
-dimensions.
+An **entropy score** (0–10) quantifies structural disorder from five weighted subscores (stability,
+boundaries, coverage, violations, classification). Computed per-package and overall.
 
 ## Repository Structure
 
@@ -75,9 +74,10 @@ install globally.
 
 ### `spasco scan`
 
-Walks all project files, applies scan plugin rules and inference, and merges results into the
-skeleton file (`.spasco/skeleton.yaml`). Newly discovered files get `?` for unknown dimensions.
-Creates `.spasco/.gitignore` on first run.
+Scan all project files, apply classification rules (built-in + plugins), and merge results into the
+skeleton file (`.spasco/skeleton.yaml`). Discovers workspace packages, infers domains from package
+names, proposes layer assignments from directory structure, and analyzes import directions to draft
+a layer policy. New entries get proposed values (`key?`) to confirm with `annotate resolve`.
 
 ```bash
 spasco scan
@@ -85,7 +85,9 @@ spasco scan
 
 ### `spasco annotate list`
 
-Lists all skeleton entries where a dimension value is unresolved (`?`).
+List all skeleton entries with unresolved dimensions — entries marked with `?` (unknown) or `key?`
+(proposed draft). Shows the proposed value and source for each. Use this to review what scan
+detected before confirming with `annotate resolve`.
 
 ```bash
 spasco annotate list
@@ -93,7 +95,9 @@ spasco annotate list
 
 ### `spasco annotate resolve [values...]`
 
-Interactively resolves `?` entries in the skeleton by assigning a dimension value.
+Confirm or override proposed dimension values in the skeleton. Pass `--all` to accept all proposals
+for a dimension, or provide specific values to override. Resolving converts draft entries (`key?`)
+into confirmed entries (`key`) and removes the draft flag.
 
 ```bash
 spasco annotate resolve --as domain          # assign domain values
@@ -103,9 +107,10 @@ spasco annotate resolve auth checkout --as domain --add layer=client-component
 
 ### `spasco dashboard`
 
-Reads configured connectors, aggregates test/lint records, and generates an HTML dashboard at
-`.spasco/reports/index.html` (configurable via `dashboard.outputDir`). Also appends to
-`.spasco/history.jsonl` and runs analysis rules to populate the Findings tab.
+Read configured connectors (Vitest, LCov, Allure, etc.), aggregate test and coverage records,
+compute entropy, run analysis rules, and generate an HTML dashboard. Output goes to the configured
+`outputDir` (default: `.spasco/reports/`). Also appends a snapshot to `.spasco/history.jsonl` for
+trend tracking.
 
 ```bash
 spasco dashboard
@@ -115,8 +120,9 @@ spasco dashboard --ci                     # terminal summary only, no HTML
 
 ### `spasco init`
 
-Auto-detects installed tools (vitest, lcov, playwright, allure, eslint, typescript) by scanning the
-repository and writes a ready-to-use `spasco.config.json`. Refuses if a config already exists.
+Auto-detect installed tools (Vitest, LCov, Playwright, Allure, ESLint, TypeScript) and workspace
+plugins (`@spaguettiscope/plugin-*`), then write a ready-to-use `spasco.config.json`. Refuses to
+overwrite an existing config. Use `--interactive` to confirm each detector.
 
 ```bash
 spasco init                                              # auto-detect, write config
@@ -126,8 +132,9 @@ spasco init --plugins @my/plugin,@other/plugin          # also run detectors fro
 
 ### `spasco analyze`
 
-Runs all analysis rules (built-in + configured `analysisPlugins`) over the topology, import graph,
-and test records. Always exits 0. Updates `.spasco/intermediates.json`.
+Run all analysis rules (built-in + configured `analysisPlugins`) over the file topology, import
+graph, and test records. Computes the entropy score. Outputs findings grouped by kind and severity.
+Always exits 0 — use `check` for CI gating. Updates `.spasco/intermediates.json`.
 
 ```bash
 spasco analyze
@@ -135,12 +142,15 @@ spasco analyze
 
 ### `spasco check`
 
-Same as `analyze` but exits 1 if findings of the configured severity exist. Designed for CI gates.
+Same as `analyze` but exits 1 if findings of the specified severity exist, or if entropy exceeds
+`--max-entropy`. Designed for CI gates. Combine `--severity` and `--max-entropy` for comprehensive
+quality gates.
 
 ```bash
 spasco check                        # fail on any error-severity finding
 spasco check --severity warning     # fail on warning or error
 spasco check --severity info        # fail on any finding
+spasco check --max-entropy 7.0          # fail if entropy exceeds 7.0
 ```
 
 ## Architecture
@@ -158,6 +168,7 @@ Functional modules (no classes):
 | `graph`          | `buildImportGraph`, `mergeImportGraphs`, `ImportGraph`                                                                                                          |
 | `workspace`      | `discoverWorkspaces(root)`                                                                                                                                      |
 | `analysis`       | `runAnalysis`, `builtInAnalysisRules`, `loadIntermediateCache`, `saveIntermediateCache`, `createIntermediateCache`, `Finding`, `AnalysisRule`, `AnalysisPlugin` |
+| `entropy`        | `computeEntropy`, `EntropyResult`, `EntropyInput`, `ENTROPY_THRESHOLDS`                                                                                         |
 | `init`           | `builtInDetectors`, `InitDetector`, `DetectedConnector`                                                                                                         |
 
 ### `@spaguettiscope/reports`
