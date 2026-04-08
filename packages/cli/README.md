@@ -2,7 +2,15 @@
 
 CLI for SpaguettiScope — code topology and entropy analysis for monorepos.
 
-## Installation
+## Try without installing
+
+```bash
+npx -p @spaguettiscope/cli spasco init
+npx -p @spaguettiscope/cli spasco scan
+npx -p @spaguettiscope/cli spasco dashboard
+```
+
+## Install globally
 
 ```bash
 npm install -g @spaguettiscope/cli

@@ -26,37 +26,43 @@ place.
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 22.0.0 or higher
-- pnpm 8.0.0 or higher
-
-### Installation
+### Try without installing
 
 ```bash
-git clone https://github.com/your-org/spaguettiscope.git
-cd spaguettiscope
-pnpm install
-pnpm build
+cd /path/to/your-project
+npx -p @spaguettiscope/cli spasco init
+npx -p @spaguettiscope/cli spasco scan
+npx -p @spaguettiscope/cli spasco dashboard
 ```
+
+### Install globally
+
+```bash
+npm install -g @spaguettiscope/cli
+```
+
+Requires Node.js 22+.
 
 ### Typical Workflow
 
 ```bash
 cd /path/to/your-project
 
-# 1. Scan your project to collect file topology and test records
+# 1. Auto-detect your tools and write config
+spasco init
+
+# 2. Scan files, build topology, propose dimension values
 spasco scan
 
-# 2. Open the interactive dashboard
+# 3. Confirm proposed classifications
+spasco annotate resolve --as domain --all
+spasco annotate resolve --as layer --all
+
+# 4. Generate the dashboard
 spasco dashboard
 
-# 3. Annotate findings for review
-spasco annotate list
-spasco annotate resolve <id>
-
-# 4. Run rule-based analysis (CI-friendly)
-spasco analyze
+# 5. Gate CI on findings or entropy
+spasco check --severity warning --max-entropy 7.0
 ```
 
 ## CLI Commands
