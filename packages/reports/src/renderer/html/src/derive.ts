@@ -172,6 +172,59 @@ export function deriveTestingOverall(summary: RawSummary): {
   return { ...acc, passRate: acc.total > 0 ? acc.passed / acc.total : 1 };
 }
 
+/**
+ * Aggregate dimension slices from testing-category connectors only.
+ * Returns the same shape as summary.dimensions but excludes lcov/eslint/typescript records.
+ */
+export function deriveTestingDimensions(summary: RawSummary): Record<string, RawSlice[]> {
+  const acc = new Map<string, Map<string, { passed: number; failed: number; skipped: number; broken: number; unknown: number; total: number }>>();
+
+  for (const conn of Object.values(summary.byConnector)) {
+    if (conn.category !== 'testing') continue;
+    for (const [dim, slices] of Object.entries(conn.dimensions)) {
+      if (!acc.has(dim)) acc.set(dim, new Map());
+      const dimMap = acc.get(dim)!;
+      for (const s of slices) {
+        const prev = dimMap.get(s.value) ?? { passed: 0, failed: 0, skipped: 0, broken: 0, unknown: 0, total: 0 };
+        dimMap.set(s.value, {
+          passed:  prev.passed  + s.passed,
+          failed:  prev.failed  + s.failed,
+          skipped: prev.skipped + s.skipped,
+          broken:  prev.broken  + s.broken,
+          unknown: prev.unknown + s.unknown,
+          total:   prev.total   + s.total,
+        });
+      }
+    }
+  }
+
+  const result: Record<string, RawSlice[]> = {};
+  for (const [dim, valMap] of acc.entries()) {
+    result[dim] = Array.from(valMap.entries()).map(([value, counts]) => ({
+      dimension: dim,
+      value,
+      ...counts,
+      passRate: counts.total > 0 ? counts.passed / counts.total : 1,
+    }));
+  }
+  return result;
+}
+
+/**
+ * Extract coverage (lcov) dimension slices. Returns passRate per dimension value.
+ * Used to show coverage percentage alongside test counts in dimension panels.
+ */
+export function deriveCoverageDimensions(summary: RawSummary): Record<string, Map<string, number>> {
+  const lcov = summary.byConnector['lcov'];
+  if (!lcov) return {};
+
+  const result: Record<string, Map<string, number>> = {};
+  for (const [dim, slices] of Object.entries(lcov.dimensions)) {
+    result[dim] = new Map(slices.map(s => [s.value, s.passRate]));
+  }
+  return result;
+}
+
 // ─── Derivation ───────────────────────────────────────────────────────────────
 
 const TESTING_CATEGORIES = new Set<RawConnectorAggregation['category']>(['testing']);

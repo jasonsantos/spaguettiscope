@@ -1,13 +1,13 @@
 // Observatory.tsx — project-wide overview: package map, connectors, trend, dimension widgets.
 import React, { useState, useId } from 'react';
-import { Area, AreaChart, Tooltip, ResponsiveContainer } from 'recharts';
+import { Area, AreaChart, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   C, alpha, fmt, hue, StatusBar, PackageIcon,
   passRateHealth, coverageHealth, findingsHealth, neutralHealth, entropyHealth,
   type HealthInfo,
 } from '../shared.tsx';
 import type { PackageInfo, FindingsCount, RawSummary } from '../derive.ts';
-import { deriveTestingOverall } from '../derive.ts';
+import { deriveTestingOverall, deriveTestingDimensions, deriveCoverageDimensions } from '../derive.ts';
 
 // ─── Connector metadata ───────────────────────────────────────────────────────
 const HIDDEN_FROM_DIM_PANELS = new Set(['package']);
@@ -236,13 +236,15 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
   const hasCoverageTrend = trend.some(t => t.coverage !== undefined);
   const avgCoverage = byConnector['lcov']?.overall.passRate ?? 0;
   const testingOverall = deriveTestingOverall(summary);
+  const testingDimensions = deriveTestingDimensions(summary);
+  const coverageDimensions = deriveCoverageDimensions(summary);
 
   const allFindings: FindingsCount = packages.reduce(
     (acc, p) => ({ error: acc.error + p.findings.error, warning: acc.warning + p.findings.warning, info: acc.info + p.findings.info }),
     { error: 0, warning: 0, info: 0 }
   );
 
-  const dimEntries = Object.entries(dimensions).filter(([k]) => !HIDDEN_FROM_DIM_PANELS.has(k));
+  const dimEntries = Object.entries(testingDimensions).filter(([k]) => !HIDDEN_FROM_DIM_PANELS.has(k));
 
   return (
     <div>
@@ -327,6 +329,8 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
                       <stop offset="95%" stopColor={C.accent} stopOpacity={0}    />
                     </linearGradient>
                   </defs>
+                  <XAxis dataKey="i" hide />
+                  <YAxis hide domain={[0, 'auto']} />
                   <Area type="monotone" dataKey="total" stroke={C.accent} strokeWidth={2}
                     fill={`url(#${gradId}-count)`} dot={false} />
                   <Tooltip
@@ -349,6 +353,8 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
                           <stop offset="95%" stopColor={C.coverage} stopOpacity={0}    />
                         </linearGradient>
                       </defs>
+                      <XAxis dataKey="i" hide />
+                      <YAxis hide domain={[0, 'auto']} />
                       <Area type="monotone" dataKey="coverage" stroke={C.coverage} strokeWidth={2}
                         fill={`url(#${gradId}-cov)`} dot={false} connectNulls={false} />
                       <Tooltip
@@ -373,6 +379,8 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
                           <stop offset="95%" stopColor={C.entropy} stopOpacity={0}    />
                         </linearGradient>
                       </defs>
+                      <XAxis dataKey="i" hide />
+                      <YAxis hide domain={[0, 'auto']} />
                       <Area type="monotone" dataKey="entropy" stroke={C.entropy} strokeWidth={2}
                         fill={`url(#${gradId}-entropy)`} dot={false} />
                       <Tooltip
@@ -452,13 +460,13 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
 
               {/* Column headers */}
               <div style={{
-                display: 'grid', gridTemplateColumns: '10px 1fr 52px 52px 16px',
+                display: 'grid', gridTemplateColumns: '10px 1fr 60px 52px 16px',
                 gap: 8, alignItems: 'center', marginBottom: 4, paddingRight: 2,
               }}>
                 <span />
                 <span style={{ fontSize: 11, color: C.muted }}>value</span>
-                <span style={{ fontSize: 11, color: C.muted, textAlign: 'right' }}>tests</span>
                 <span style={{ fontSize: 11, color: C.muted, textAlign: 'right' }}>pass</span>
+                <span style={{ fontSize: 11, color: C.muted, textAlign: 'right' }}>cov</span>
                 <span />
               </div>
 
@@ -467,17 +475,19 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
                 const { accent: dotColor } = passRateHealth(s.passRate);
                 const rowKey = `${dim}:${s.value}`;
                 const isActive = hoveredRow === rowKey;
+                const covMap = coverageDimensions[dim];
+                const covRate = covMap?.get(s.value);
                 return (
                   <button
                     key={s.value}
                     onClick={() => onSelectDimension(dim, s.value)}
-                    aria-label={`${dim}: ${s.value} — ${s.total} tests, ${fmt(s.passRate)} passing. Click to view.`}
+                    aria-label={`${dim}: ${s.value} — ${s.passed}/${s.total} tests passing${covRate !== undefined ? `, ${fmt(covRate)} coverage` : ''}. Click to view.`}
                     onMouseEnter={() => setHoveredRow(rowKey)}
                     onMouseLeave={() => setHoveredRow(null)}
                     onFocus={() => setHoveredRow(rowKey)}
                     onBlur={() => setHoveredRow(null)}
                     style={{
-                      display: 'grid', gridTemplateColumns: '10px 1fr 52px 52px 16px',
+                      display: 'grid', gridTemplateColumns: '10px 1fr 60px 52px 16px',
                       gap: 8, alignItems: 'center', width: '100%',
                       background: isActive ? C.surfaceHigh : 'none',
                       border: 'none',
@@ -508,14 +518,15 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
                     </span>
 
                     <span style={{
-                      fontSize: 12, color: C.muted, textAlign: 'right',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}>{s.total}</span>
-
-                    <span style={{
                       fontSize: 12, fontWeight: 700, textAlign: 'right',
                       color: dotColor, fontVariantNumeric: 'tabular-nums',
-                    }}>{fmt(s.passRate)}</span>
+                    }}>{s.passed}/{s.total}</span>
+
+                    <span style={{
+                      fontSize: 12, textAlign: 'right',
+                      color: covRate !== undefined ? C.coverage : C.dim,
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>{covRate !== undefined ? fmt(covRate) : '—'}</span>
 
                     <span style={{ color: C.dim, fontSize: 11, textAlign: 'right' }}>›</span>
                   </button>

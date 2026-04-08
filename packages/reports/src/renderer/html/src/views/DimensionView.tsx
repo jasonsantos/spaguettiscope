@@ -1,6 +1,6 @@
 // DimensionView.tsx — paginated suite list filtered by a single dimension tag.
 import React from 'react';
-import { C, fmt, passRateHealth } from '../shared.tsx';
+import { C, fmt, passRateHealth, coverageHealth, alpha } from '../shared.tsx';
 import { SuiteTree } from './SuiteTree.tsx';
 import type { SuiteInfo } from '../derive.ts';
 
@@ -8,9 +8,10 @@ interface DimensionViewProps {
   dim: string;
   val: string;
   allSuites: SuiteInfo[];
+  coverage?: number;
 }
 
-export function DimensionView({ dim, val, allSuites }: DimensionViewProps) {
+export function DimensionView({ dim, val, allSuites, coverage }: DimensionViewProps) {
   // Match on role / domain / layer / pkg
   const matched = allSuites.filter(
     s => s[dim as 'role' | 'domain' | 'layer' | 'pkg'] === val
@@ -90,6 +91,15 @@ export function DimensionView({ dim, val, allSuites }: DimensionViewProps) {
           }}>
             {matched.length} suite{matched.length !== 1 ? 's' : ''}
           </span>
+          {coverage !== undefined && (
+            <span style={{
+              fontSize: 12, padding: '4px 10px', borderRadius: 6,
+              background: C.surfaceHigh, color: coverageHealth(coverage).text,
+              border: `1px solid ${C.border}`, fontWeight: 600,
+            }}>
+              {fmt(coverage)} coverage
+            </span>
+          )}
         </div>
       </div>
 

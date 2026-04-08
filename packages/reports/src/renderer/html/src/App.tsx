@@ -1,7 +1,7 @@
 // App.tsx — root component: data loading, navigation state, header, breadcrumb.
 import React, { useState, useEffect, useMemo } from 'react';
 import type { RawSummary, RawRecord, RawFinding } from './derive.ts';
-import { derivePackages, deriveSuites, deriveTestingOverall } from './derive.ts';
+import { derivePackages, deriveSuites, deriveTestingOverall, deriveCoverageDimensions } from './derive.ts';
 import { C, alpha, fmt, passRateHealth, PackageIcon } from './shared.tsx';
 import { Observatory }   from './views/Observatory.tsx';
 import { PackageView }   from './views/PackageView.tsx';
@@ -110,8 +110,13 @@ function useDashboardData() {
     [records, summary]
   );
 
+  const coverageDims = useMemo(
+    () => summary ? deriveCoverageDimensions(summary) : {},
+    [summary]
+  );
+
   return {
-    summary, packages, suites, findings: findings ?? [], loadErr,
+    summary, packages, suites, findings: findings ?? [], coverageDims, loadErr,
     loading: !summary || !records || !findings,
   };
 }
@@ -165,7 +170,7 @@ function PackageBreadcrumb({ name, pkg }: { name: string; pkg: PackageInfo | und
 // ─── App ──────────────────────────────────────────────────────────────────────
 export function App() {
   const [drill, setDrill] = useState<Drill>(null);
-  const { summary, packages, suites, findings, loadErr, loading } = useDashboardData();
+  const { summary, packages, suites, findings, coverageDims, loadErr, loading } = useDashboardData();
   const { mode: themeMode, cycle: cycleTheme } = useTheme();
 
   // ── Loading / error states ──
@@ -328,7 +333,12 @@ export function App() {
         })()}
 
         {drill?.type === 'dimension' && (
-          <DimensionView dim={drill.dim} val={drill.val} allSuites={suites} />
+          <DimensionView
+            dim={drill.dim}
+            val={drill.val}
+            allSuites={suites}
+            coverage={coverageDims[drill.dim]?.get(drill.val)}
+          />
         )}
 
         {drill?.type === 'findings' && (
