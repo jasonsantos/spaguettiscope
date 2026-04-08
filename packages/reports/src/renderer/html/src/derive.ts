@@ -3,6 +3,12 @@
 
 // ─── Raw JSON shapes ──────────────────────────────────────────────────────────
 
+export interface RawEntropyResult {
+  score: number;
+  classification: string;
+  subscores: Record<string, { score: number; available: boolean }>;
+}
+
 export interface RawOverall {
   total: number;
   passed: number;
@@ -46,6 +52,7 @@ export interface RawSummary {
     dimensionSummary: Record<string, Record<string, { total: number; passed: number; failed: number }>>;
     testPassRate?: number;
     coveragePassRate?: number;
+    entropyScore?: number;
   }>;
   byConnector: Record<string, RawConnectorAggregation>;
   /**
@@ -53,6 +60,10 @@ export interface RawSummary {
    * Written to summary.json by the dashboard command when plugins declare a type.
    */
   packageTypes?: Record<string, string>;
+  entropy?: {
+    overall: RawEntropyResult;
+    byPackage: Record<string, RawEntropyResult>;
+  };
 }
 
 export interface RawRecord {
@@ -114,6 +125,7 @@ export interface PackageInfo {
   /** LCov passRate for this package (fraction of covered files) */
   coverage: number;
   findings: FindingsCount;
+  entropy?: RawEntropyResult;
 }
 
 export interface TestInfo {
@@ -254,7 +266,7 @@ export function derivePackages(summary: RawSummary, findings: RawFinding[]): Pac
     return 'library';
   }
 
-  return Array.from(allNames)
+  const result = Array.from(allNames)
     .map(name => {
       const t = testing.get(name) ?? { passed: 0, failed: 0, skipped: 0, broken: 0, total: 0 };
       return {
@@ -268,9 +280,22 @@ export function derivePackages(summary: RawSummary, findings: RawFinding[]): Pac
         passRate: t.total > 0 ? t.passed / t.total : null,
         coverage: coverageByPkg.get(name) ?? 0,
         findings: findingsByPkg.get(name) ?? { error: 0, warning: 0, info: 0 },
-      };
+      } as PackageInfo;
     })
     .sort((a, b) => b.tests - a.tests);
+
+  if (summary.entropy?.byPackage) {
+    for (const pkg of result) {
+      // Keys in byPackage are rel paths like "packages/core", while package names might be "@spaguettiscope/core"
+      // Try both the name itself and common rel-path patterns
+      const entropyData = Object.entries(summary.entropy.byPackage).find(([key]) =>
+        pkg.name === key || pkg.name.endsWith('/' + key.split('/').pop())
+      )?.[1];
+      if (entropyData) pkg.entropy = entropyData;
+    }
+  }
+
+  return result;
 }
 
 /**

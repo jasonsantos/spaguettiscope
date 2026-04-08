@@ -3,7 +3,7 @@ import React, { useState, useId } from 'react';
 import { Area, AreaChart, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   C, alpha, fmt, hue, StatusBar, PackageIcon,
-  passRateHealth, coverageHealth, findingsHealth, neutralHealth,
+  passRateHealth, coverageHealth, findingsHealth, neutralHealth, entropyHealth,
   type HealthInfo,
 } from '../shared.tsx';
 import type { PackageInfo, FindingsCount, RawSummary } from '../derive.ts';
@@ -197,6 +197,15 @@ function PackageMap({ packages, onSelect }: PackageMapProps) {
             <div style={{ fontSize: 11, fontWeight: 600, color: p.passRate !== null ? health.text : C.muted, marginTop: 1 }}>
               {fmt(p.coverage)} cov
             </div>
+            {p.entropy && (
+              <div style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: entropyHealth(p.entropy.score).text,
+              }}>
+                &#8767; {p.entropy.score.toFixed(1)}
+              </div>
+            )}
           </div>
         );
       })}
@@ -220,8 +229,9 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
 
   const trend = history.slice(-20).map((h, i) => ({
     i,
-    coverage: h.coveragePassRate,
-    total:    h.overall.total,
+    coverage:     h.coveragePassRate,
+    total:        h.overall.total,
+    entropy:      h.entropyScore,
   }));
   const hasCoverageTrend = trend.some(t => t.coverage !== undefined);
   const avgCoverage = byConnector['lcov']?.overall.passRate ?? 0;
@@ -237,7 +247,7 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
   return (
     <div>
       {/* ── Metric cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
         <MetricCard
           label="Pass Rate"
           value={fmt(testingOverall.passRate)}
@@ -251,6 +261,18 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
           sub={`${byConnector['lcov']?.overall.passed ?? 0} files covered`}
           health={coverageHealth(avgCoverage)}
         />
+        {summary.entropy && (() => {
+          const e = summary.entropy.overall;
+          const health = entropyHealth(e.score);
+          return (
+            <MetricCard
+              label="ENTROPY"
+              value={e.score.toFixed(1)}
+              sub={`${e.classification} · 5 subscores`}
+              health={health}
+            />
+          );
+        })()}
         <MetricCard
           label="Findings"
           value={String(allFindings.error + allFindings.warning)}
@@ -332,6 +354,30 @@ export function Observatory({ summary, packages, onSelectPackage, onSelectDimens
                       <Tooltip
                         contentStyle={{ background: C.surfaceHigh, border: `1px solid ${C.border}`, fontSize: 11, borderRadius: 8 }}
                         formatter={(v: unknown) => v !== undefined ? [fmt(v as number), 'coverage'] : []}
+                        labelFormatter={() => ''}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </>
+              )}
+
+              {/* Entropy sparkline */}
+              {trend.some(t => t.entropy !== undefined) && (
+                <>
+                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, marginTop: 14 }}>Entropy</div>
+                  <ResponsiveContainer width="100%" height={56}>
+                    <AreaChart data={trend}>
+                      <defs>
+                        <linearGradient id={`${gradId}-entropy`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor={C.entropy} stopOpacity={0.25} />
+                          <stop offset="95%" stopColor={C.entropy} stopOpacity={0}    />
+                        </linearGradient>
+                      </defs>
+                      <Area type="monotone" dataKey="entropy" stroke={C.entropy} strokeWidth={2}
+                        fill={`url(#${gradId}-entropy)`} dot={false} />
+                      <Tooltip
+                        contentStyle={{ background: C.surfaceHigh, border: `1px solid ${C.border}`, fontSize: 11, borderRadius: 8 }}
+                        formatter={(v: unknown) => v !== undefined ? [(v as number).toFixed(1), 'entropy'] : []}
                         labelFormatter={() => ''}
                       />
                     </AreaChart>

@@ -24,6 +24,8 @@ export const C = {
   info:        'var(--c-info)',
   infoBg:      'var(--c-info-bg)',
   coverage:    'var(--c-coverage)',
+  entropy:     'var(--c-entropy)',
+  entropyBg:   'var(--c-entropy-bg)',
 } as const;
 
 /** Alpha-blend a CSS custom property value. Uses color-mix() — modern browsers only. */
@@ -262,6 +264,14 @@ export function findingsHealth(f: { error: number; warning: number; info: number
   if (f.warning > 0) return { accent: C.warning, bg: C.warningBg, chip: '⚠ Warnings', text: C.warning };
   if (f.info    > 0) return { accent: C.info,    bg: C.infoBg,    chip: 'ℹ Info',      text: C.info    };
   return                    { accent: C.passed,  bg: C.passedBg,  chip: '✓ Clean',     text: C.passed  };
+}
+
+export function entropyHealth(score: number): HealthInfo {
+  if (score < 3.0) return { accent: C.passed,  bg: C.passedBg,  chip: '✓ Excellent', text: C.passed  }
+  if (score < 5.0) return { accent: C.entropy, bg: C.entropyBg, chip: 'Good',        text: C.entropy }
+  if (score < 7.0) return { accent: C.warning, bg: C.warningBg, chip: '⚠ Moderate', text: C.warning }
+  if (score < 9.0) return { accent: C.failed,  bg: C.failedBg,  chip: '⚠ Poor',     text: C.failed  }
+  return                  { accent: C.failed,  bg: C.failedBg,  chip: '✕ Critical',  text: C.failed  }
 }
 
 // ─── BDD step source renderer ─────────────────────────────────────────────────
