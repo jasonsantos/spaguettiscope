@@ -13,9 +13,12 @@ import {
   saveIntermediateCache,
   InferenceEngine,
   defaultDefinitions,
+  computeEntropy,
   type AnalysisRule,
   type TestRecord,
   type Finding,
+  type EntropyResult,
+  type EntropyInput,
 } from '@spaguettiscope/core'
 import { walkFiles } from '../utils/files.js'
 import { AllureConnector } from '@spaguettiscope/reports'
@@ -29,6 +32,7 @@ export interface AnalyzeOptions {
 export interface AnalyzeResult {
   findings: Finding[]
   summary: { error: number; warning: number; info: number }
+  entropy: EntropyResult
 }
 
 export async function runAnalyzeCommand(options: AnalyzeOptions = {}): Promise<AnalyzeResult> {
@@ -139,7 +143,53 @@ export async function runAnalyzeCommand(options: AnalyzeOptions = {}): Promise<A
     `Analysis complete — ${summary.error} errors, ${summary.warning} warnings, ${summary.info} info`
   )
 
-  return { findings, summary }
+  // 7. Compute entropy
+  let entropyEdgeCount = 0
+  let entropyMaxFanOut = 0
+  for (const [, targets] of importGraph.imports) {
+    entropyEdgeCount += targets.size
+    if (targets.size > entropyMaxFanOut) entropyMaxFanOut = targets.size
+  }
+
+  const flakyCount = findings.filter(f => f.kind === 'flakiness').length
+  const totalTests = testRecords.length
+
+  const entropyInput: EntropyInput = {
+    fileCount: allFiles.length,
+    passRate:
+      totalTests > 0
+        ? testRecords.filter(r => r.status === 'passed').length / totalTests
+        : undefined,
+    flakyRatio: totalTests > 0 ? flakyCount / totalTests : 0,
+    circularDepFiles: new Set(
+      findings
+        .filter(f => f.ruleId === 'built-in:circular-dep')
+        .map(f => (f.subject.type === 'file' ? f.subject.path : ''))
+        .filter(Boolean)
+    ).size,
+    edgeCount: entropyEdgeCount,
+    maxFanOut: entropyMaxFanOut,
+    unusedExports: findings.filter(f => f.ruleId === 'built-in:unused-export').length,
+    lcovCoverage: undefined,
+    coverageGaps: findings.filter(f => f.kind === 'coverage-gap').length,
+    findingsByWeight: findings.reduce((sum, f) => {
+      if (f.severity === 'error') return sum + 3
+      if (f.severity === 'warning') return sum + 1
+      return sum + 0.5
+    }, 0),
+    resolvedRatio: (() => {
+      const total = topology.size
+      const resolved = [...topology.values()].filter(dims => {
+        const keys = Object.keys(dims)
+        return keys.length > 0 && !keys.some(k => k.endsWith('?') || k === '?')
+      }).length
+      return total > 0 ? resolved / total : 1
+    })(),
+  }
+  const entropy = computeEntropy(entropyInput)
+  printSuccess(`Entropy: ${entropy.score} (${entropy.classification})`)
+
+  return { findings, summary, entropy }
 }
 
 function printAnalysisSummary(

@@ -16,8 +16,10 @@ import {
   saveIntermediateCache,
   type AnalysisRule,
   type Finding,
+  type EntropyResult,
 } from '@spaguettiscope/core'
 import { walkFiles } from '../utils/files.js'
+import { computeEntropyForProject } from '../utils/entropy-input.js'
 import {
   AllureConnector,
   PlaywrightConnector,
@@ -205,47 +207,12 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
     : undefined
 
   const historyPath = resolve(projectRoot, config.dashboard.historyFile)
-  await appendHistory(historyPath, {
-    runAt: new Date().toISOString(),
-    connectors: activeConnectorIds,
-    overall: aggregated.overall,
-    testPassRate,
-    coveragePassRate,
-    dimensionSummary: Object.fromEntries(
-      Object.entries(aggregated)
-        .filter(([k]) => k !== 'overall')
-        .map(([k, slices]) => [
-          k,
-          Object.fromEntries(
-            (slices as AggregatedSlice[]).map(s => [
-              s.value,
-              { total: s.total, passed: s.passed, failed: s.failed },
-            ])
-          ),
-        ])
-    ),
-  })
-  const history = await readHistory(historyPath)
+
+  let entropyForHistory:
+    | { overall: EntropyResult; byPackage: Record<string, EntropyResult> }
+    | undefined
 
   if (!options.ci) {
-    const dashboardData: DashboardData = {
-      generatedAt: new Date().toISOString(),
-      projectName: config.name,
-      projectRoot,
-      connectors: activeConnectorIds,
-      overall: aggregated.overall,
-      dimensions: Object.fromEntries(
-        Object.entries(aggregated)
-          .filter(([k]) => k !== 'overall')
-          .map(([k, v]) => [k, v as AggregatedSlice[]])
-      ),
-      history,
-      byConnector: aggregateByConnector(
-        records,
-        Object.fromEntries(CONNECTORS.map(c => [c.id, c.category]))
-      ),
-    }
-
     const html = buildDashboardHtml()
     const outputPath = join(outputDir, 'index.html')
     writeFileSync(outputPath, html, 'utf-8')
@@ -308,6 +275,44 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
     })
     saveIntermediateCache(intermediatesPath, analysisCache)
 
+    // Compute entropy
+    const entropySpinner = ora('Computing entropy…').start()
+    const entropyResult = computeEntropyForProject(
+      {
+        files: allFiles,
+        importGraph: analysisImportGraph,
+        findings,
+        topology: analysisTopology,
+        records,
+      },
+      packages
+    )
+    entropyForHistory = entropyResult
+    entropySpinner.succeed(
+      `Entropy: ${entropyResult.overall.score} (${entropyResult.overall.classification})`
+    )
+
+    const history = await readHistory(historyPath)
+
+    const dashboardData: DashboardData = {
+      generatedAt: new Date().toISOString(),
+      projectName: config.name,
+      projectRoot,
+      connectors: activeConnectorIds,
+      overall: aggregated.overall,
+      dimensions: Object.fromEntries(
+        Object.entries(aggregated)
+          .filter(([k]) => k !== 'overall')
+          .map(([k, v]) => [k, v as AggregatedSlice[]])
+      ),
+      history,
+      byConnector: aggregateByConnector(
+        records,
+        Object.fromEntries(CONNECTORS.map(c => [c.id, c.category]))
+      ),
+      entropy: entropyResult,
+    }
+
     writeDashboardData(outputDir, dashboardData, records, findings)
 
     // Copy renderer assets (JS bundle) alongside index.html
@@ -318,6 +323,35 @@ export async function runDashboard(options: DashboardOptions): Promise<void> {
 
     printSuccess(`Dashboard generated → ${outputPath}`)
   }
+
+  await appendHistory(historyPath, {
+    runAt: new Date().toISOString(),
+    connectors: activeConnectorIds,
+    overall: aggregated.overall,
+    testPassRate,
+    coveragePassRate,
+    dimensionSummary: Object.fromEntries(
+      Object.entries(aggregated)
+        .filter(([k]) => k !== 'overall')
+        .map(([k, slices]) => [
+          k,
+          Object.fromEntries(
+            (slices as AggregatedSlice[]).map(s => [
+              s.value,
+              { total: s.total, passed: s.passed, failed: s.failed },
+            ])
+          ),
+        ])
+    ),
+    ...(entropyForHistory
+      ? {
+          entropyScore: entropyForHistory.overall.score,
+          entropyByPackage: Object.fromEntries(
+            Object.entries(entropyForHistory.byPackage).map(([k, v]) => [k, v.score])
+          ),
+        }
+      : {}),
+  })
 
   // Always print terminal summary
   const summary = formatTerminalSummary(aggregated, {

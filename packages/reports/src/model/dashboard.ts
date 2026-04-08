@@ -1,5 +1,6 @@
 import type { AggregatedSlice, ConnectorAggregation, OverallSummary } from '../aggregator/index.js'
 import type { HistoryEntry } from './history.js'
+import type { EntropyResult } from '@spaguettiscope/core'
 
 export interface DashboardData {
   generatedAt: string
@@ -10,4 +11,8 @@ export interface DashboardData {
   dimensions: Record<string, AggregatedSlice[]>
   history: HistoryEntry[]
   byConnector: Record<string, ConnectorAggregation>
+  entropy?: {
+    overall: EntropyResult
+    byPackage: Record<string, EntropyResult>
+  }
 }

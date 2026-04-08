@@ -100,9 +100,10 @@ program
   .command('check')
   .description('Run analysis rules and exit 1 if any error-severity findings exist')
   .option('--severity <level>', 'Treat this severity and above as errors', 'error')
+  .option('--max-entropy <threshold>', 'Exit 1 if overall entropy exceeds this value (0-10)', parseFloat)
   .action(async options => {
     try {
-      const { summary } = await runAnalyzeCommand({ ci: true })
+      const { summary, entropy } = await runAnalyzeCommand({ ci: true })
       const hasErrors =
         options.severity === 'info'
           ? summary.error + summary.warning + summary.info > 0
@@ -110,6 +111,10 @@ program
             ? summary.error + summary.warning > 0
             : summary.error > 0
       if (hasErrors) process.exit(1)
+      if (options.maxEntropy !== undefined && entropy.score > options.maxEntropy) {
+        console.error(`Entropy ${entropy.score} exceeds threshold ${options.maxEntropy}`)
+        process.exit(1)
+      }
     } catch (err) {
       console.error((err as Error).message)
       process.exit(1)

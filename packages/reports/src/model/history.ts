@@ -17,6 +17,8 @@ export interface HistoryEntry {
   testPassRate?: number;
   /** Pass rate from the lcov coverage connector (fraction of files meeting threshold) */
   coveragePassRate?: number;
+  entropyScore?: number;
+  entropyByPackage?: Record<string, number>;
 }
 
 export async function appendHistory(filePath: string, entry: HistoryEntry): Promise<void> {
