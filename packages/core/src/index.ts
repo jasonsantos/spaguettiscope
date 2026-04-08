@@ -8,4 +8,5 @@ export * from './graph/index.js';
 export * from './graph/predicates.js';
 export * from './graph/layers.js';
 export * from './analysis/index.js';
-export * from './init/index.js';
+export * from './init/index.js'
+export * from './entropy/index.js';
